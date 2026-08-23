@@ -2,30 +2,37 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Özel Arayüzlü HLS.js Player</title>
-    <!-- hls.js kütüphanesini projeye dahil ediyoruz -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro HLS Web Player</title>
+    <!-- HLS.js Kütüphanesi -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: #0f1015;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: #090a0f;
             color: #fff;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
-            margin: 0;
         }
 
-        .player-container {
+        .player-wrapper {
             position: relative;
-            width: 800px;
+            width: 900px;
             max-width: 100%;
             background: #000;
-            border-radius: 12px;
+            border-radius: 16px;
             overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+            user-select: none;
         }
 
         video {
@@ -33,26 +40,123 @@
             height: auto;
             display: block;
             cursor: pointer;
-            transition: filter 0.2s ease;
+            transition: filter 0.3s ease;
         }
 
-        /* Özel Kontrol Paneli */
-        .controls-bar {
+        /* Yükleniyor / Hata Ekranı Katmanı */
+        .player-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            opacity: 0;
+            z-index: 5;
+        }
+
+        .player-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .error-message {
+            margin-top: 15px;
+            color: #ef4444;
+            font-weight: 600;
+            font-size: 14px;
+            text-align: center;
+            padding: 0 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Modern Kontrol Paneli */
+        .controls-container {
             position: absolute;
             bottom: 0;
             left: 0;
             right: 0;
-            background: linear-gradient(transparent, rgba(0,0,0,0.8));
+            background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.85) 100%);
+            padding: 20px 20px 15px 20px;
             display: flex;
-            align-items: center;
-            padding: 12px 15px;
-            gap: 15px;
-            opacity: 0;
-            transition: opacity 0.3s ease;
+            flex-direction: column;
+            gap: 10px;
+            transition: opacity 0.4s ease;
+            z-index: 10;
         }
 
-        .player-container:hover .controls-bar {
-            opacity: 1;
+        .player-wrapper.hide-controls .controls-container {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* İlerleme ve Buffer Çubuğu */
+        .progress-container {
+            position: relative;
+            width: 100%;
+            height: 6px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 3px;
+            cursor: pointer;
+            overflow: hidden;
+            transition: height 0.1s ease;
+        }
+
+        .progress-container:hover {
+            height: 9px;
+        }
+
+        .buffer-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background: rgba(255,255,255,0.4);
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+
+        .progress-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background: #3b82f6;
+            border-radius: 3px;
+            width: 0%;
+        }
+
+        /* Alt Buton Grubu */
+        .controls-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+        }
+
+        .controls-left, .controls-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
         }
 
         button {
@@ -60,104 +164,202 @@
             border: none;
             color: #fff;
             cursor: pointer;
-            font-size: 16px;
-            padding: 5px;
+            font-size: 18px;
+            padding: 4px;
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: color 0.2s, transform 0.1s;
         }
 
         button:hover {
             color: #3b82f6;
+            transform: scale(1.1);
         }
 
-        .time-display {
+        .time-text {
             font-size: 13px;
-            color: #ddd;
-            min-width: 80px;
+            font-variant-numeric: tabular-nums;
+            color: #e2e8f0;
         }
 
-        .spacer {
-            flex-grow: 1;
-        }
-
-        select, input[type="range"] {
-            background: rgba(255,255,255,0.1);
-            color: #fff;
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 4px;
-            padding: 4px 8px;
-            font-size: 13px;
-            outline: none;
-            cursor: pointer;
-        }
-
-        select option {
-            background: #1a1a1a;
-            color: #fff;
-        }
-
-        .control-group {
+        /* Ses Kontrol Alanı */
+        .volume-wrapper {
             display: flex;
             align-items: center;
-            gap: 6px;
-            font-size: 13px;
+            gap: 8px;
         }
 
         input[type="range"] {
-            width: 80px;
+            -webkit-appearance: none;
+            width: 70px;
+            height: 4px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 2px;
+            outline: none;
             accent-color: #3b82f6;
+            cursor: pointer;
+        }
+
+        /* Kalite ve Ayar Menüleri */
+        select {
+            background: rgba(20,20,30,0.8);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 6px;
+            padding: 5px 10px;
+            font-size: 13px;
+            outline: none;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        select:hover {
+            border-color: #3b82f6;
+        }
+
+        select option {
+            background: #111218;
+        }
+
+        .badge-live {
+            background: #ef4444;
+            color: white;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 4px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
         }
     </style>
 </head>
 <body>
 
-    <div class="player-container" id="playerContainer">
-        <video id="videoPlayer"></video>
+    <div class="player-wrapper" id="playerWrapper">
+        <!-- Yükleniyor ve Hata Katmanı -->
+        <div class="player-overlay active" id="playerOverlay">
+            <div class="spinner" id="loadingSpinner"></div>
+            <div class="error-message" id="errorMessage">Yayın yükleniyor...</div>
+        </div>
 
-        <div class="controls-bar" id="controlsBar">
-            <button id="playPauseBtn" title="Oynat/Duraklat">▶</button>
-            
-            <div class="time-display" id="timeDisplay">00:00 / 00:00</div>
-            
-            <div class="control-group">
-                <span>Ses:</span>
-                <input type="range" id="volumeRange" min="0" max="1" step="0.05" value="1">
+        <video id="videoElement" playsinline></video>
+
+        <!-- Gelişmiş Kontrol Paneli -->
+        <div class="controls-container" id="controlsContainer">
+            <!-- İlerleme ve Önbellek Çubuğu -->
+            <div class="progress-container" id="progressContainer">
+                <div class="buffer-bar" id="bufferBar"></div>
+                <div class="progress-bar" id="progressBar"></div>
             </div>
 
-            <div class="control-group">
-                <span>Parlaklık:</span>
-                <input type="range" id="brightnessRange" min="0.5" max="1.5" step="0.1" value="1">
+            <div class="controls-row">
+                <div class="controls-left">
+                    <button id="playPauseBtn" title="Oynat / Duraklat">▶</button>
+                    
+                    <div class="volume-wrapper">
+                        <button id="muteBtn" title="Sesi Kapat">🔊</button>
+                        <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="1">
+                    </div>
+
+                    <div class="time-text" id="timeDisplay">00:00 / 00:00</div>
+                    <div class="badge-live" id="liveBadge">CANLI</div>
+                </div>
+
+                <div class="controls-right">
+                    <div class="control-group" style="display:flex; align-items:center; gap:6px;">
+                        <span style="font-size:12px; color:#aaa;">Kalite:</span>
+                        <select id="qualitySelect">
+                            <option value="-1">Otomatik</option>
+                        </select>
+                    </div>
+
+                    <button id="fullscreenBtn" title="Tam Ekran">⛶</button>
+                </div>
             </div>
-
-            <div class="spacer"></div>
-
-            <div class="control-group">
-                <span>Kalite:</span>
-                <select id="qualitySelect">
-                    <option value="-1">Otomatik</option>
-                </select>
-            </div>
-
-            <button id="fullscreenBtn" title="Tam Ekran">⛶</button>
         </div>
     </div>
 
     <script>
-        const video = document.getElementById('videoPlayer');
-        const playerContainer = document.getElementById('playerContainer');
+        const video = document.getElementById('videoElement');
+        const playerWrapper = document.getElementById('playerWrapper');
+        const playerOverlay = document.getElementById('playerOverlay');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const errorMessage = document.getElementById('errorMessage');
         const playPauseBtn = document.getElementById('playPauseBtn');
+        const muteBtn = document.getElementById('muteBtn');
+        const volumeSlider = document.getElementById('volumeSlider');
         const timeDisplay = document.getElementById('timeDisplay');
-        const volumeRange = document.getElementById('volumeRange');
-        const brightnessRange = document.getElementById('brightnessRange');
+        const liveBadge = document.getElementById('liveBadge');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const bufferBar = document.getElementById('bufferBar');
         const qualitySelect = document.getElementById('qualitySelect');
         const fullscreenBtn = document.getElementById('fullscreenBtn');
 
-        // Test etmek istediğin canlı yayın linki
         const streamUrl = 'https://corestream.siteyaptim.live//bein1/tracks-v1a1/mono.m3u8';
+        let hls = null;
+        let hideControlsTimeout = null;
 
-        // --- 1. ARAYÜZ KONTROLLERİ ---
+        // --- 1. OYNATICI MOTORU (HLS.JS) ---
+        function initPlayer() {
+            if (Hls.isSupported()) {
+                hls = new Hls({
+                    maxBufferLength: 30,
+                    liveSyncDurationCount: 3,
+                });
 
+                hls.loadSource(streamUrl);
+                hls.attachMedia(video);
+
+                hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
+                    hideOverlay();
+                    qualitySelect.innerHTML = '<option value="-1">Otomatik</option>';
+                    data.levels.forEach((level, index) => {
+                        const opt = document.createElement('option');
+                        opt.value = index;
+                        opt.text = level.height ? `${level.height}p` : `Seviye ${index + 1}`;
+                        qualitySelect.appendChild(opt);
+                    });
+                });
+
+                hls.on(Hls.Events.ERROR, (event, data) => {
+                    if (data.fatal) {
+                        switch (data.type) {
+                            case Hls.ErrorTypes.NETWORK_ERROR:
+                                showOverlayError('Ağ hatası oluştu, yeniden bağlanılıyor...');
+                                hls.startLoad();
+                                break;
+                            case Hls.ErrorTypes.MEDIA_ERROR:
+                                showOverlayError('Medya hatası kurtarılıyor...');
+                                hls.recoverMediaError();
+                                break;
+                            default:
+                                showOverlayError('Yayın oynatılamıyor (CORS veya Sunucu Hatası).');
+                                hls.destroy();
+                                break;
+                        }
+                    }
+                });
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = streamUrl;
+                video.addEventListener('loadedmetadata', hideOverlay);
+            } else {
+                showOverlayError('Tarayıcınız bu akış formatını desteklemiyor.');
+            }
+        }
+
+        function showOverlayError(msg) {
+            loadingSpinner.style.display = 'none';
+            errorMessage.textContent = msg;
+            playerOverlay.classList.add('active');
+        }
+
+        function hideOverlay() {
+            playerOverlay.classList.remove('active');
+        }
+
+        // --- 2. KONTROL SİSTEMLERİ ---
         playPauseBtn.addEventListener('click', togglePlay);
         video.addEventListener('click', togglePlay);
 
@@ -171,12 +373,40 @@
             }
         }
 
+        video.addEventListener('play', () => playPauseBtn.textContent = '❚❚');
+        video.addEventListener('pause', () => playPauseBtn.textContent = '▶');
+
+        // Süre ve Progress Takibi
         video.addEventListener('timeupdate', () => {
             const current = video.currentTime;
             const duration = video.duration;
-            // Canlı yayınlarda duration Infinity olabilir
-            const durationText = isFinite(duration) ? formatTime(duration) : 'Canlı Yayın';
-            timeDisplay.textContent = `${formatTime(current)} / ${durationText}`;
+
+            if (isFinite(duration) && duration > 0) {
+                const percent = (current / duration) * 100;
+                progressBar.style.width = `${percent}%`;
+                timeDisplay.textContent = `${formatTime(current)} / ${formatTime(duration)}`;
+                liveBadge.style.display = 'none';
+            } else {
+                timeDisplay.textContent = formatTime(current);
+                liveBadge.style.display = 'inline-block';
+            }
+
+            // Buffer hesaplama
+            if (video.buffered.length > 0) {
+                const bufferedEnd = video.buffered.end(video.buffered.length - 1);
+                if (isFinite(duration) && duration > 0) {
+                    bufferBar.style.width = `${(bufferedEnd / duration) * 100}%`;
+                }
+            }
+        });
+
+        // Çubuğa tıklayarak ileri/geri sarma (Seek)
+        progressContainer.addEventListener('click', (e) => {
+            const rect = progressContainer.getBoundingClientRect();
+            const pos = (e.clientX - rect.left) / rect.width;
+            if (isFinite(video.duration)) {
+                video.currentTime = pos * video.duration;
+            }
         });
 
         function formatTime(seconds) {
@@ -185,63 +415,58 @@
             return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
         }
 
-        volumeRange.addEventListener('input', (e) => {
+        // Ses Kontrolleri
+        volumeSlider.addEventListener('input', (e) => {
             video.volume = e.target.value;
+            video.muted = e.target.value == 0;
+            updateVolumeIcon();
         });
 
-        brightnessRange.addEventListener('input', (e) => {
-            video.style.filter = `brightness(${e.target.value})`;
+        muteBtn.addEventListener('click', () => {
+            video.muted = !video.muted;
+            volumeSlider.value = video.muted ? 0 : video.volume;
+            updateVolumeIcon();
         });
 
+        function updateVolumeIcon() {
+            if (video.muted || video.volume == 0) {
+                muteBtn.textContent = '🔇';
+            } else if (video.volume < 0.5) {
+                muteBtn.textContent = '🔉';
+            } else {
+                muteBtn.textContent = '🔊';
+            }
+        }
+
+        // Kalite Seçimi
+        qualitySelect.addEventListener('change', (e) => {
+            if (hls) {
+                hls.currentLevel = parseInt(e.target.value);
+            }
+        });
+
+        // Tam Ekran
         fullscreenBtn.addEventListener('click', () => {
             if (!document.fullscreenElement) {
-                playerContainer.requestFullscreen().catch(err => console.error(err));
+                playerWrapper.requestFullscreen().catch(err => console.error(err));
             } else {
                 document.exitFullscreen();
             }
         });
 
-        // --- 2. HLS.JS MOTORU ENTEGRASYONU ---
+        // Fare hareketsizse kontrolleri gizle (Fullscreen/Desktop deneyimi)
+        playerWrapper.addEventListener('mousemove', () => {
+            playerWrapper.classList.remove('hide-controls');
+            clearTimeout(hideControlsTimeout);
+            hideControlsTimeout = setTimeout(() => {
+                if (!video.paused) {
+                    playerWrapper.classList.add('hide-controls');
+                }
+            }, 3000);
+        });
 
-        if (Hls.isSupported()) {
-            const hls = new Hls();
-            hls.loadSource(streamUrl);
-            hls.attachMedia(video);
-
-            hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
-                console.HlsLog = 'Manifest yüklendi, kalite seviyeleri ayarlanıyor.';
-                
-                // Kalite seçeneklerini dolduruyoruz
-                qualitySelect.innerHTML = '<option value="-1">Otomatik</option>';
-                data.levels.forEach((level, index) => {
-                    const option = document.createElement('option');
-                    option.value = index;
-                    option.text = level.height ? `${level.heightp}` : `Seviye ${index + 1}`;
-                    qualitySelect.appendChild(option);
-                });
-            });
-
-            // Kullanıcı arayüzden kalite değiştirdiğinde
-            qualitySelect.addEventListener('change', (e) => {
-                hls.currentLevel = parseInt(e.target.value);
-            });
-
-            // Otomatik oynatma denemesi
-            video.addEventListener('loadedmetadata', () => {
-                video.play().catch(() => {
-                    console.log('Tarayıcı otomatik oynatmayı engelledi, kullanıcı etkileşimi bekleniyor.');
-                });
-            });
-
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            // Safari gibi yerel HLS destekleyen tarayıcılar için
-            video.src = streamUrl;
-            video.addEventListener('loadedmetadata', () => {
-                video.play();
-            });
-        } else {
-            alert('Tarayıcınız bu HLS akışını desteklemiyor.');
-        }
+        // Başlat
+        initPlayer();
     </script>
 </body>
 </html>
