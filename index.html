@@ -25,7 +25,7 @@
         .player-wrapper {
             position: relative;
             width: 100vw;
-            height: 100svh; /* Mobil tarayıcı boşluklarını hesaba katar */
+            height: 100svh;
             background: #000;
             display: flex;
             align-items: center;
@@ -159,7 +159,7 @@
             to { transform: rotate(360deg); }
         }
 
-        /* Kontrol Paneli - Mobilde Altta Kalmaması İçin Güvenli Alan Eklendi */
+        /* Kontrol Paneli */
         .controls-container {
             position: absolute;
             bottom: 0;
@@ -453,7 +453,7 @@
                         </div>
                     </div>
 
-                    <!-- Kalite ve Hız Ayarları Yan Yana -->
+                    <!-- Kalite ve Hız Ayarları -->
                     <div class="menu-container">
                         <button id="settingsBtn" class="icon-btn" title="Ayarlar">⚙️</button>
                         <div class="dropdown-panel" id="settingsDropdown">
@@ -618,12 +618,14 @@
             e.stopPropagation(); 
             settingsDropdown.classList.toggle('active'); 
             subtitlesDropdown.classList.remove('active');
+            resetHideTimer(); // Menü açıldığında kapanma süresini sıfırla
         });
 
         subtitlesBtn.addEventListener('click', (e) => { 
             e.stopPropagation(); 
             subtitlesDropdown.classList.toggle('active'); 
             settingsDropdown.classList.remove('active');
+            resetHideTimer(); // Menü açıldığında kapanma süresini sıfırla
         });
 
         document.addEventListener('click', () => {
@@ -651,7 +653,10 @@
             showCenterAnimation('pause');
         });
 
-        playPauseBtn.addEventListener('click', togglePlay);
+        playPauseBtn.addEventListener('click', () => {
+            togglePlay();
+            resetHideTimer();
+        });
 
         function showCenterAnimation(state) {
             if (state === 'play') {
@@ -684,6 +689,7 @@
             resetHideTimer();
         });
 
+        // Ekrana Dokunma / Tıklama Kontrolü (3 Saniye Kuralı)
         let lastTap = 0;
         playerWrapper.addEventListener('click', (e) => {
             if (e.target.closest('.controls-container') || e.target.closest('.seek-overlay-btn') || e.target.closest('.center-big-play-btn')) return;
@@ -696,11 +702,12 @@
                 e.preventDefault();
             } else {
                 if (playerWrapper.classList.contains('hide-controls')) {
+                    // Gizliyse görünür yap ve 3 saniye sayacını başlat
                     playerWrapper.classList.remove('hide-controls');
                     resetHideTimer();
                 } else {
-                    playerWrapper.classList.add('hide-controls');
-                    clearTimeout(hideTimeout);
+                    // Zaten açıksa dokunulduğunda süreyi sıfırla veya açık tut
+                    resetHideTimer();
                 }
             }
             lastTap = currentTime;
@@ -745,7 +752,7 @@
             return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
         }
 
-        progressContainer.addEventListener('mousedown', (e) => { isDragging = true; updateDragPosition(e); });
+        progressContainer.addEventListener('mousedown', (e) => { isDragging = true; updateDragPosition(e); resetHideTimer(); });
         document.addEventListener('mousemove', (e) => { if (!isDragging) return; updateDragPosition(e); });
         document.addEventListener('mouseup', (e) => {
             if (!isDragging) return;
@@ -753,9 +760,10 @@
             if (isFinite(video.duration) && video.duration > 0) {
                 video.currentTime = getClampedPos(e) * video.duration;
             }
+            resetHideTimer();
         });
 
-        progressContainer.addEventListener('touchstart', (e) => { isDragging = true; updateDragPosition(e); });
+        progressContainer.addEventListener('touchstart', (e) => { isDragging = true; updateDragPosition(e); resetHideTimer(); });
         document.addEventListener('touchmove', (e) => { if (!isDragging) return; updateDragPosition(e); });
         document.addEventListener('touchend', (e) => {
             if (!isDragging) return;
@@ -763,6 +771,7 @@
             if (isFinite(video.duration) && video.duration > 0 && e.changedTouches) {
                 video.currentTime = getClampedPos(e.changedTouches[0]) * video.duration;
             }
+            resetHideTimer();
         });
 
         function updateDragPosition(e) {
@@ -785,12 +794,14 @@
             video.volume = e.target.value;
             video.muted = e.target.value == 0;
             updateVolumeIcon();
+            resetHideTimer();
         });
 
         muteBtn.addEventListener('click', () => {
             video.muted = !video.muted;
             volumeSlider.value = video.muted ? 0 : video.volume;
             updateVolumeIcon();
+            resetHideTimer();
         });
 
         function updateVolumeIcon() {
@@ -806,9 +817,14 @@
                 if (document.pictureInPictureElement) await document.exitPictureInPicture();
                 else if (document.pictureInPictureEnabled) await video.requestPictureInPicture();
             } catch (err) { console.error("PiP Hatası:", err); }
+            resetHideTimer();
         });
 
-        fullscreenBtn.addEventListener('click', toggleFullscreen);
+        fullscreenBtn.addEventListener('click', () => {
+            toggleFullscreen();
+            resetHideTimer();
+        });
+
         function toggleFullscreen() {
             if (!document.fullscreenElement) {
                 playerWrapper.requestFullscreen().catch(err => console.error(err));
@@ -820,19 +836,21 @@
         document.addEventListener('keydown', (e) => {
             if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
             const key = e.key.toLowerCase();
-            if (key === ' ' || key === 'k') { e.preventDefault(); togglePlay(); }
-            else if (key === 'f') { e.preventDefault(); toggleFullscreen(); }
+            if (key === ' ' || key === 'k') { e.preventDefault(); togglePlay(); resetHideTimer(); }
+            else if (key === 'f') { e.preventDefault(); toggleFullscreen(); resetHideTimer(); }
             else if (key === 'm') { e.preventDefault(); muteBtn.click(); }
-            else if (key === 'arrowright') { e.preventDefault(); if (isFinite(video.duration)) video.currentTime = Math.min(video.duration, video.currentTime + 10); }
-            else if (key === 'arrowleft') { e.preventDefault(); video.currentTime = Math.max(0, video.currentTime - 10); }
-            else if (key === 'arrowup') { e.preventDefault(); video.volume = Math.min(1, video.volume + 0.05); volumeSlider.value = video.volume; updateVolumeIcon(); }
-            else if (key === 'arrowdown') { e.preventDefault(); video.volume = Math.max(0, video.volume - 0.05); volumeSlider.value = video.volume; updateVolumeIcon(); }
+            else if (key === 'arrowright') { e.preventDefault(); if (isFinite(video.duration)) video.currentTime = Math.min(video.duration, video.currentTime + 10); resetHideTimer(); }
+            else if (key === 'arrowleft') { e.preventDefault(); video.currentTime = Math.max(0, video.currentTime - 10); resetHideTimer(); }
+            else if (key === 'arrowup') { e.preventDefault(); video.volume = Math.min(1, video.volume + 0.05); volumeSlider.value = video.volume; updateVolumeIcon(); resetHideTimer(); }
+            else if (key === 'arrowdown') { e.preventDefault(); video.volume = Math.max(0, video.volume - 0.05); volumeSlider.value = video.volume; updateVolumeIcon(); resetHideTimer(); }
         });
 
+        // 3 Saniye Sonra Otomatik Gizleme Zamanlayıcısı
         function resetHideTimer() {
             playerWrapper.classList.remove('hide-controls');
             clearTimeout(hideTimeout);
             hideTimeout = setTimeout(() => {
+                // Video oynuyorsa ve açık menü yoksa 3 saniye sonra gizle
                 if (!video.paused && !settingsDropdown.classList.contains('active') && !subtitlesDropdown.classList.contains('active')) {
                     playerWrapper.classList.add('hide-controls');
                 }
