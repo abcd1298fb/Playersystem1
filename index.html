@@ -410,11 +410,9 @@
 <body>
 
     <div class="player-wrapper" id="playerWrapper">
-        <!-- YouTube Tarzı Ortada Sağ ve Sol 10 Saniye Butonları -->
         <button class="seek-overlay-btn seek-left" id="overlayRewind" title="10 Saniye Geri">◀ -10s</button>
         <button class="seek-overlay-btn seek-right" id="overlayForward" title="10 Saniye İleri">+10s ▶</button>
 
-        <!-- Ortadaki Büyük Oynat/Durdur İkonu -->
         <div class="center-big-play-btn" id="centerBigPlayBtn">
             <svg id="centerPlayIconSvg" viewBox="0 0 24 24">
                 <path d="M8 5v14l11-7z"/>
@@ -426,7 +424,6 @@
             <div class="overlay-text" id="overlayText">Yayın Yükleniyor...</div>
         </div>
 
-        <!-- Ses tam açık, manuel başlatma için hazır video elementi -->
         <video id="videoElement" playsinline></video>
 
         <div class="controls-container" id="controlsContainer">
@@ -438,7 +435,6 @@
 
             <div class="controls-row">
                 <div class="controls-left">
-                    <!-- Boyutları Eşitlenmiş Oynat/Duraklat Butonu (SVG tabanlı) -->
                     <button id="playPauseBtn" class="custom-svg-btn" title="Oynat/Duraklat (K)">
                         <svg id="playPauseIconSvg" viewBox="0 0 24 24">
                             <path d="M8 5v14l11-7z"/>
@@ -459,7 +455,6 @@
                 </div>
 
                 <div class="controls-right">
-                    <!-- Altyazı -->
                     <div class="menu-container">
                         <button id="subtitlesBtn" class="custom-svg-btn" title="Altyazılar">
                             <svg viewBox="0 0 24 24">
@@ -472,7 +467,6 @@
                         </div>
                     </div>
 
-                    <!-- Kalite ve Hız Ayarları -->
                     <div class="menu-container">
                         <button id="settingsBtn" class="icon-btn" title="Ayarlar">⚙️</button>
                         <div class="dropdown-panel" id="settingsDropdown">
@@ -493,7 +487,6 @@
                         </div>
                     </div>
 
-                    <!-- PiP -->
                     <button id="pipBtn" class="custom-svg-btn" title="Resim İçinde Resim">
                         <svg viewBox="0 0 24 24">
                             <path d="M19 7h-8v6h8V7zm2-4H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16.01H3V4.99h18v14.02z"/>
@@ -534,13 +527,20 @@
         const centerBigPlayBtn = document.getElementById('centerBigPlayBtn');
         const centerPlayIconSvg = document.getElementById('centerPlayIconSvg');
 
-        const streamUrl = 'https://Pz4qT7nW1mR9sH2vL5xK8jG3y.medya.trt.com.tr/master.m3u8';
+        // Kendi HLS (.m3u8) maç yayın linkini buraya yapıştırabilirsin:
+        const streamUrl = ''; 
+        
         let hls = null;
         let hideTimeout = null;
         let centerAnimTimeout = null;
         let isDragging = false;
 
         function initPlayer() {
+            if (!streamUrl) {
+                document.getElementById('overlayText').textContent = "Yayın Linki Bekleniyor...";
+                return;
+            }
+
             video.volume = 1.0;
             volumeSlider.value = 1.0;
             updateVolumeIcon();
