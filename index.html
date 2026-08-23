@@ -40,27 +40,46 @@
             display: block;
         }
 
-        /* YouTube Tarzı İleri / Geri Sarma Efekt Alanları */
-        .double-tap-effect {
+        /* YouTube Tarzı Ortada Sağ/Sol 10 Saniye Butonları */
+        .seek-overlay-btn {
             position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 25%;
-            z-index: 15;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            font-size: 16px;
+            font-weight: 700;
+            padding: 15px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            z-index: 20;
             display: flex;
             align-items: center;
-            justify-content: center;
-            color: rgba(255,255,255,0.8);
-            font-size: 24px;
-            font-weight: bold;
-            opacity: 0;
-            transition: opacity 0.3s;
-            pointer-events: none;
-            background: rgba(0,0,0,0.2);
+            gap: 8px;
+            opacity: 0.8;
+            transition: background 0.2s, transform 0.2s, opacity 0.2s;
+            backdrop-filter: blur(4px);
         }
-        .double-tap-left { left: 0; }
-        .double-tap-right { right: 0; }
-        .double-tap-effect.active { opacity: 1; }
+
+        .seek-overlay-btn:hover {
+            background: rgba(229, 9, 20, 0.8);
+            border-color: #E50914;
+            opacity: 1;
+            transform: translateY(-50%) scale(1.05);
+        }
+
+        .seek-left { left: 8%; }
+        .seek-right { right: 8%; }
+
+        @media (max-width: 768px) {
+            .seek-overlay-btn {
+                padding: 10px 14px;
+                font-size: 13px;
+            }
+            .seek-left { left: 4%; }
+            .seek-right { right: 4%; }
+        }
 
         /* Yüklenme ve Hata Ekranı */
         .player-overlay {
@@ -108,7 +127,7 @@
             bottom: 0;
             left: 0;
             right: 0;
-            background: linear-gradient(180deg, rgba(20,20,20,0) 0%, rgba(20,20,20,0.8) 40%, rgba(20,20,20,0.98) 100%);
+            background: linear-gradient(180deg, rgba(20,20,20,0) 0%, rgba(20,20,20,0.85) 40%, rgba(20,20,20,0.98) 100%);
             padding: 20px 15px 12px 15px;
             display: flex;
             flex-direction: column;
@@ -253,39 +272,44 @@
             accent-color: #E50914;
         }
 
-        /* Menüler */
+        /* Ayarlar ve Altyazı Menüleri */
         .menu-container {
             position: relative;
         }
 
         .dropdown-panel {
             position: absolute;
-            bottom: 40px;
+            bottom: 45px;
             right: 0;
-            background: rgba(28, 28, 28, 0.95);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 6px;
-            width: 150px;
-            padding: 6px 0;
+            background: rgba(22, 22, 22, 0.96);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 8px;
+            padding: 10px;
             display: none;
-            flex-direction: column;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
-            backdrop-filter: blur(5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            backdrop-filter: blur(6px);
             z-index: 40;
         }
 
         .dropdown-panel.active {
             display: flex;
+            gap: 15px; /* Kalite ve Hız yan yana duracak */
+        }
+
+        .menu-column {
+            display: flex;
+            flex-direction: column;
+            min-width: 110px;
         }
 
         .dropdown-header {
-            font-size: 10px;
-            color: #8c8c8c;
-            padding: 5px 12px;
+            font-size: 11px;
+            color: #999;
+            padding: 4px 8px;
             font-weight: 700;
             text-transform: uppercase;
-            border-bottom: 1px solid rgba(255,255,255,0.08);
-            margin-bottom: 3px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 6px;
         }
 
         .menu-option {
@@ -293,9 +317,10 @@
             border: none;
             color: #d2d2d2;
             text-align: left;
-            padding: 7px 12px;
+            padding: 6px 10px;
             font-size: 12px;
             width: 100%;
+            border-radius: 4px;
             cursor: pointer;
             transition: background 0.1s, color 0.1s;
         }
@@ -309,6 +334,7 @@
         .menu-option.selected {
             color: #E50914;
             font-weight: 700;
+            background: rgba(229, 9, 20, 0.1);
         }
 
         .icon-btn {
@@ -317,7 +343,7 @@
 
         @media (max-width: 600px) {
             .volume-wrapper input[type="range"] {
-                display: none; /* Mobilde ses çubuğunu gizleyip yerden tasarruf edelim */
+                display: none;
             }
         }
     </style>
@@ -325,9 +351,9 @@
 <body>
 
     <div class="player-wrapper" id="playerWrapper">
-        <!-- YouTube Tarzı Çift Tıklama Efektleri -->
-        <div class="double-tap-effect double-tap-left" id="tapLeft">« -10s</div>
-        <div class="double-tap-effect double-tap-right" id="tapRight">+10s »</div>
+        <!-- YouTube Tarzı Ortada Sağ ve Sol 10 Saniye Butonları -->
+        <button class="seek-overlay-btn seek-left" id="overlayRewind" title="10 Saniye Geri">◀ -10s</button>
+        <button class="seek-overlay-btn seek-right" id="overlayForward" title="10 Saniye İleri">+10s ▶</button>
 
         <div class="player-overlay active" id="playerOverlay">
             <div class="netflix-spinner"></div>
@@ -368,25 +394,29 @@
                                 <path d="M19 4H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-8 7H7v1h4v2H7v1h4v1H6V9h5v2zm7 5h-5v-1h4v-1h-3v-1h3v-1h-4V9h5v7z"/>
                             </svg>
                         </button>
-                        <div class="dropdown-panel" id="subtitlesDropdown">
+                        <div class="dropdown-panel" id="subtitlesDropdown" style="display:none; flex-direction:column;">
                             <div class="dropdown-header">Altyazı</div>
-                            <div id="subtitlesListContainer"></div>
+                            <div id="subtitlesListContainer" style="display:flex; flex-direction:column;"></div>
                         </div>
                     </div>
 
-                    <!-- Kalite ve Hız (Ayarlar) -->
+                    <!-- Kalite ve Hız Ayarları Yan Yana -->
                     <div class="menu-container">
                         <button id="settingsBtn" class="icon-btn" title="Ayarlar">⚙️</button>
                         <div class="dropdown-panel" id="settingsDropdown">
-                            <div class="dropdown-header">Kalite</div>
-                            <div id="qualityListContainer"></div>
-                            <div class="dropdown-header" style="margin-top:6px;">Hız</div>
-                            <div id="speedListContainer">
-                                <button class="menu-option" onclick="setSpeed(0.5)">0.5x</button>
-                                <button class="menu-option selected" onclick="setSpeed(1)">Normal (1x)</button>
-                                <button class="menu-option" onclick="setSpeed(1.25)">1.25x</button>
-                                <button class="menu-option" onclick="setSpeed(1.5)">1.5x</button>
-                                <button class="menu-option" onclick="setSpeed(2)">2.0x</button>
+                            <div class="menu-column">
+                                <div class="dropdown-header">Kalite</div>
+                                <div id="qualityListContainer"></div>
+                            </div>
+                            <div class="menu-column">
+                                <div class="dropdown-header">Hız</div>
+                                <div id="speedListContainer">
+                                    <button class="menu-option" onclick="setSpeed(0.5)">0.5x</button>
+                                    <button class="menu-option selected" onclick="setSpeed(1)">Normal (1x)</button>
+                                    <button class="menu-option" onclick="setSpeed(1.25)">1.25x</button>
+                                    <button class="menu-option" onclick="setSpeed(1.5)">1.5x</button>
+                                    <button class="menu-option" onclick="setSpeed(2)">2.0x</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -426,8 +456,8 @@
         const subtitlesListContainer = document.getElementById('subtitlesListContainer');
         const pipBtn = document.getElementById('pipBtn');
         const fullscreenBtn = document.getElementById('fullscreenBtn');
-        const tapLeft = document.getElementById('tapLeft');
-        const tapRight = document.getElementById('tapRight');
+        const overlayRewind = document.getElementById('overlayRewind');
+        const overlayForward = document.getElementById('overlayForward');
 
         const streamUrl = 'https://Pz4qT7nW1mR9sH2vL5xK8jG3y.medya.trt.com.tr/master.m3u8';
         let hls = null;
@@ -555,42 +585,29 @@
         video.addEventListener('play', () => playPauseBtn.textContent = '❚❚');
         video.addEventListener('pause', () => playPauseBtn.textContent = '▶');
 
-        // YOUTUBE TARZI ÇİFT TIKLAMA / ÇİFT DOKUNMA (Sarma ve Tam Ekran)
+        // Ortadaki -10s ve +10s Buton İşlevleri
+        overlayRewind.addEventListener('click', (e) => {
+            e.stopPropagation();
+            video.currentTime = Math.max(0, video.currentTime - 10);
+        });
+
+        overlayForward.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (isFinite(video.duration)) video.currentTime = Math.min(video.duration, video.currentTime + 10);
+        });
+
+        // Çift Tıklama ile Tam Ekran (Kontroller harici alanlar)
         let lastTap = 0;
         playerWrapper.addEventListener('click', (e) => {
+            if (e.target.closest('.controls-container') || e.target.closest('.seek-overlay-btn')) return;
             const currentTime = new Date().getTime();
             const tapLength = currentTime - lastTap;
-            
-            // Eğer kontrollerin üzerine tıklandıysa çift tıklama tetiklenmesin
-            if (e.target.closest('.controls-container')) return;
-
             if (tapLength < 300 && tapLength > 0) {
-                // Çift Tıklama / Dokunma Algılandı
-                const rect = playerWrapper.getBoundingClientRect();
-                const clickX = e.clientX - rect.left;
-                
-                if (clickX < rect.width * 0.3) {
-                    // Sol taraf: 10 saniye geri
-                    video.currentTime = Math.max(0, video.currentTime - 10);
-                    showEffectAnimation(tapLeft);
-                } else if (clickX > rect.width * 0.7) {
-                    // Sağ taraf: 10 saniye ileri
-                    if (isFinite(video.duration)) video.currentTime = Math.min(video.duration, video.currentTime + 10);
-                    showEffectAnimation(tapRight);
-                } else {
-                    // Orta kısım: Tam ekran yap/çık
-                    toggleFullscreen();
-                }
+                toggleFullscreen();
                 e.preventDefault();
             }
             lastTap = currentTime;
         });
-
-        function showEffectAnimation(element) {
-            element.classList.add('active');
-            setTimeout(() => element.classList.remove('active5'), 500);
-            setTimeout(() => element.classList.remove('active'), 400);
-        }
 
         // Süre Takibi ve Tooltip
         video.addEventListener('timeupdate', () => {
@@ -719,7 +736,7 @@
             else if (key === 'arrowdown') { e.preventDefault(); video.volume = Math.max(0, video.volume - 0.05); volumeSlider.value = video.volume; updateVolumeIcon(); }
         });
 
-        // Kontrolleri Otomatik Gizleme
+        // Kontrolleri Otomatik Gizleme (Mouse Hareketi)
         playerWrapper.addEventListener('mousemove', () => {
             playerWrapper.classList.remove('hide-controls');
             clearTimeout(hideTimeout);
