@@ -420,7 +420,7 @@
         </div>
 
         <div class="player-overlay active" id="playerOverlay">
-            <div class="netflix-spinner"></div>
+            <div class="netflix-spinner" id="netflixSpinner"></div>
             <div class="overlay-text" id="overlayText">Yayın Yükleniyor...</div>
         </div>
 
@@ -503,6 +503,8 @@
         const video = document.getElementById('videoElement');
         const playerWrapper = document.getElementById('playerWrapper');
         const playerOverlay = document.getElementById('playerOverlay');
+        const overlayText = document.getElementById('overlayText');
+        const netflixSpinner = document.getElementById('netflixSpinner');
         const playPauseBtn = document.getElementById('playPauseBtn');
         const playPauseIconSvg = document.getElementById('playPauseIconSvg');
         const muteBtn = document.getElementById('muteBtn');
@@ -527,9 +529,10 @@
         const centerBigPlayBtn = document.getElementById('centerBigPlayBtn');
         const centerPlayIconSvg = document.getElementById('centerPlayIconSvg');
 
-        // Kendi HLS (.m3u8) maç yayın linkini buraya yapıştırabilirsin:
-        const streamUrl = ''; 
-        
+        // URL'den ?src=... parametresini dinamik olarak çeker
+        const urlParams = new URLSearchParams(window.location.search);
+        const streamUrl = urlParams.get('src');
+
         let hls = null;
         let hideTimeout = null;
         let centerAnimTimeout = null;
@@ -537,7 +540,8 @@
 
         function initPlayer() {
             if (!streamUrl) {
-                document.getElementById('overlayText').textContent = "Yayın Linki Bekleniyor...";
+                netflixSpinner.style.display = 'none';
+                overlayText.textContent = "Yayın Linki Bulunamadı (Geçersiz İstek)";
                 return;
             }
 
