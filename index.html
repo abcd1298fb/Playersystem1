@@ -40,7 +40,7 @@
             display: block;
         }
 
-        /* YouTube Tarzı Ortada Sağ/Sol 10 Saniye Butonları */
+        /* YouTube Tarzı Ortada Sağ/Sol 10 Saniye Butonları (Kontrollerle birlikte gizlenip açılır) */
         .seek-overlay-btn {
             position: absolute;
             top: 50%;
@@ -57,15 +57,19 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            opacity: 0.8;
-            transition: background 0.2s, transform 0.2s, opacity 0.2s;
+            opacity: 0.9;
+            transition: background 0.2s, transform 0.2s, opacity 0.3s;
             backdrop-filter: blur(4px);
+        }
+
+        .player-wrapper.hide-controls .seek-overlay-btn {
+            opacity: 0;
+            pointer-events: none;
         }
 
         .seek-overlay-btn:hover {
             background: rgba(229, 9, 20, 0.8);
             border-color: #E50914;
-            opacity: 1;
             transform: translateY(-50%) scale(1.05);
         }
 
@@ -121,7 +125,7 @@
             to { transform: rotate(360deg); }
         }
 
-        /* Kontrol Paneli */
+        /* Kontrol Paneli (Başlangıçta açık başlar) */
         .controls-container {
             position: absolute;
             bottom: 0;
@@ -134,6 +138,9 @@
             gap: 10px;
             transition: opacity 0.3s ease, transform 0.3s ease;
             z-index: 30;
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
         }
 
         .player-wrapper.hide-controls .controls-container {
@@ -272,7 +279,7 @@
             accent-color: #E50914;
         }
 
-        /* Ayarlar ve Altyazı Menüleri */
+        /* Ayarlar ve Altyazı Menüleri Yan Yana */
         .menu-container {
             position: relative;
         }
@@ -293,7 +300,7 @@
 
         .dropdown-panel.active {
             display: flex;
-            gap: 15px; /* Kalite ve Hız yan yana duracak */
+            gap: 15px;
         }
 
         .menu-column {
@@ -491,6 +498,8 @@
                     video.play(); 
                 });
             }
+            // Başlangıçta kontrollerin gizlenmesini önlemek için zamanlayıcıyı başlat
+            resetHideTimer();
         }
 
         function hideOverlay() { playerOverlay.classList.remove('active'); }
@@ -589,22 +598,35 @@
         overlayRewind.addEventListener('click', (e) => {
             e.stopPropagation();
             video.currentTime = Math.max(0, video.currentTime - 10);
+            resetHideTimer();
         });
 
         overlayForward.addEventListener('click', (e) => {
             e.stopPropagation();
             if (isFinite(video.duration)) video.currentTime = Math.min(video.duration, video.currentTime + 10);
+            resetHideTimer();
         });
 
-        // Çift Tıklama ile Tam Ekran (Kontroller harici alanlar)
+        // Tıklama / Dokunma ile Kontrolleri Açma / Kapatma ve Çift Tıklama ile Tam Ekran
         let lastTap = 0;
         playerWrapper.addEventListener('click', (e) => {
             if (e.target.closest('.controls-container') || e.target.closest('.seek-overlay-btn')) return;
+            
             const currentTime = new Date().getTime();
             const tapLength = currentTime - lastTap;
+            
             if (tapLength < 300 && tapLength > 0) {
                 toggleFullscreen();
                 e.preventDefault();
+            } else {
+                // Tek tıklama/dokunma ile kontrolleri göster/gizle toggle yap
+                if (playerWrapper.classList.contains('hide-controls')) {
+                    playerWrapper.classList.remove('hide-controls');
+                    resetHideTimer();
+                } else {
+                    playerWrapper.classList.add('hide-controls');
+                    clearTimeout(hideTimeout);
+                }
             }
             lastTap = currentTime;
         });
@@ -736,8 +758,8 @@
             else if (key === 'arrowdown') { e.preventDefault(); video.volume = Math.max(0, video.volume - 0.05); volumeSlider.value = video.volume; updateVolumeIcon(); }
         });
 
-        // Kontrolleri Otomatik Gizleme (Mouse Hareketi)
-        playerWrapper.addEventListener('mousemove', () => {
+        // Kontrolleri Otomatik Gizleme Mantığı
+        function resetHideTimer() {
             playerWrapper.classList.remove('hide-controls');
             clearTimeout(hideTimeout);
             hideTimeout = setTimeout(() => {
@@ -745,7 +767,10 @@
                     playerWrapper.classList.add('hide-controls');
                 }
             }, 3000);
-        });
+        }
+
+        playerWrapper.addEventListener('mousemove', resetHideTimer);
+        playerWrapper.addEventListener('touchstart', resetHideTimer);
 
         initPlayer();
     </script>
