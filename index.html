@@ -22,6 +22,7 @@
             justify-content: center;
             min-height: 100vh;
             overflow: hidden;
+            user-select: none;
         }
 
         .player-wrapper {
@@ -33,7 +34,6 @@
             border-radius: 8px;
             overflow: hidden;
             box-shadow: 0 15px 35px rgba(0,0,0,0.9);
-            cursor: pointer;
         }
 
         video {
@@ -104,7 +104,7 @@
             transform: translateY(10px);
         }
 
-        /* İlerleme Çubuğu */
+        /* Gelişmiş Sürüklenebilir İlerleme Çubuğu */
         .progress-container {
             position: relative;
             width: 100%;
@@ -127,6 +127,7 @@
             background: rgba(255, 255, 255, 0.4);
             border-radius: 2px;
             width: 0%;
+            pointer-events: none;
         }
 
         .progress-bar {
@@ -137,6 +138,7 @@
             background: #E50914;
             border-radius: 2px;
             width: 0%;
+            pointer-events: none;
         }
 
         .controls-row {
@@ -184,21 +186,21 @@
             letter-spacing: 1px;
         }
 
-        /* Ses Bölümü ve Modern SVG İkon */
+        /* Ses Bölümü ve SVG İkonlar */
         .volume-wrapper {
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
-        .volume-btn svg {
+        .custom-svg-btn svg {
             width: 22px;
             height: 22px;
             fill: #fff;
             transition: fill 0.15s;
         }
 
-        .volume-btn:hover svg {
+        .custom-svg-btn:hover svg {
             fill: #E50914;
         }
 
@@ -213,19 +215,19 @@
             accent-color: #E50914;
         }
 
-        /* Netflix Kalite / Ayarlar Menüsü */
-        .settings-menu-container {
+        /* Netflix Menüleri (Kalite & Altyazı) */
+        .menu-container {
             position: relative;
         }
 
-        .settings-dropdown {
+        .dropdown-panel {
             position: absolute;
             bottom: 40px;
             right: 0;
             background: rgba(28, 28, 28, 0.95);
             border: 1px solid rgba(255,255,255,0.1);
             border-radius: 6px;
-            width: 160px;
+            width: 170px;
             padding: 8px 0;
             display: none;
             flex-direction: column;
@@ -234,11 +236,11 @@
             z-index: 30;
         }
 
-        .settings-dropdown.active {
+        .dropdown-panel.active {
             display: flex;
         }
 
-        .settings-header {
+        .dropdown-header {
             font-size: 11px;
             color: #8c8c8c;
             padding: 6px 15px;
@@ -248,7 +250,7 @@
             margin-bottom: 4px;
         }
 
-        .quality-option {
+        .menu-option {
             background: none;
             border: none;
             color: #d2d2d2;
@@ -260,12 +262,13 @@
             transition: background 0.1s, color 0.1s;
         }
 
-        .quality-option:hover {
+        .menu-option:hover {
             background: rgba(255,255,255,0.1);
             color: #fff;
+            transform: none;
         }
 
-        .quality-option.selected {
+        .menu-option.selected {
             color: #E50914;
             font-weight: 700;
         }
@@ -286,6 +289,7 @@
         <video id="videoElement" playsinline></video>
 
         <div class="controls-container" id="controlsContainer">
+            <!-- Sürüklenebilir İlerleme Çubuğu -->
             <div class="progress-container" id="progressContainer">
                 <div class="buffer-bar" id="bufferBar"></div>
                 <div class="progress-bar" id="progressBar"></div>
@@ -296,8 +300,7 @@
                     <button id="playPauseBtn" class="icon-btn" title="Oynat/Duraklat">❚❚</button>
                     
                     <div class="volume-wrapper">
-                        <button id="muteBtn" class="volume-btn" title="Sesi Aç/Kapat">
-                            <!-- Modern SVG Ses İkonu -->
+                        <button id="muteBtn" class="custom-svg-btn" title="Sesi Aç/Kapat">
                             <svg id="volumeIconSvg" viewBox="0 0 24 24">
                                 <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
                             </svg>
@@ -310,10 +313,24 @@
                 </div>
 
                 <div class="controls-right">
-                    <div class="settings-menu-container">
+                    <!-- Altyazı Butonu ve Menüsü -->
+                    <div class="menu-container">
+                        <button id="subtitlesBtn" class="custom-svg-btn" title="Altyazılar">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M19 4H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-8 7H7v1h4v2H7v1h4v1H6V9h5v2zm7 5h-5v-1h4v-1h-3v-1h3v-1h-4V9h5v7z"/>
+                            </svg>
+                        </button>
+                        <div class="dropdown-panel" id="subtitlesDropdown">
+                            <div class="dropdown-header">Altyazı</div>
+                            <div id="subtitlesListContainer"></div>
+                        </div>
+                    </div>
+
+                    <!-- Kalite / Ayarlar Butonu ve Menüsü -->
+                    <div class="menu-container">
                         <button id="settingsBtn" class="icon-btn" title="Ayarlar">⚙️</button>
-                        <div class="settings-dropdown" id="settingsDropdown">
-                            <div class="settings-header">Kalite</div>
+                        <div class="dropdown-panel" id="settingsDropdown">
+                            <div class="dropdown-header">Kalite</div>
                             <div id="qualityListContainer"></div>
                         </div>
                     </div>
@@ -341,11 +358,15 @@
         const settingsBtn = document.getElementById('settingsBtn');
         const settingsDropdown = document.getElementById('settingsDropdown');
         const qualityListContainer = document.getElementById('qualityListContainer');
+        const subtitlesBtn = document.getElementById('subtitlesBtn');
+        const subtitlesDropdown = document.getElementById('subtitlesDropdown');
+        const subtitlesListContainer = document.getElementById('subtitlesListContainer');
         const fullscreenBtn = document.getElementById('fullscreenBtn');
 
         const streamUrl = 'https://Pz4qT7nW1mR9sH2vL5xK8jG3y.medya.trt.com.tr/master.m3u8';
         let hls = null;
         let hideTimeout = null;
+        let isDragging = false;
 
         function initPlayer() {
             if (Hls.isSupported()) {
@@ -356,6 +377,7 @@
                 hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
                     hideOverlay();
                     buildQualityMenu(data.levels);
+                    buildSubtitleMenu();
                     video.play().catch(() => playPauseBtn.textContent = '▶');
                 });
 
@@ -367,41 +389,95 @@
                 });
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                 video.src = streamUrl;
-                video.addEventListener('loadedmetadata', () => { hideOverlay(); video.play(); });
+                video.addEventListener('loadedmetadata', () => { 
+                    hideOverlay(); 
+                    buildSubtitleMenu();
+                    video.play(); 
+                });
             }
         }
 
         function hideOverlay() { playerOverlay.classList.remove('active'); }
 
+        // Kalite Menüsü Oluşturma
         function buildQualityMenu(levels) {
             qualityListContainer.innerHTML = '';
             const autoBtn = document.createElement('button');
-            autoBtn.className = 'quality-option selected';
+            autoBtn.className = 'menu-option selected';
             autoBtn.textContent = 'Otomatik';
-            autoBtn.onclick = () => { hls.currentLevel = -1; updateSelectedUI(autoBtn); };
+            autoBtn.onclick = () => { hls.currentLevel = -1; updateSelectedUI(autoBtn, qualityListContainer); };
             qualityListContainer.appendChild(autoBtn);
 
             levels.forEach((level, index) => {
                 const btn = document.createElement('button');
-                btn.className = 'quality-option';
+                btn.className = 'menu-option';
                 btn.textContent = level.height ? `${level.height}p` : `Seviye ${index + 1}`;
-                btn.onclick = () => { hls.currentLevel = index; updateSelectedUI(btn); };
+                btn.onclick = () => { hls.currentLevel = index; updateSelectedUI(btn, qualityListContainer); };
                 qualityListContainer.appendChild(btn);
             });
         }
 
-        function updateSelectedUI(el) {
-            document.querySelectorAll('.quality-option').forEach(o => o.classList.remove('selected'));
-            el.classList.add('selected');
-            settingsDropdown.classList.remove('active');
+        // Altyazı Menüsü Oluşturma
+        function buildSubtitleMenu() {
+            subtitlesListContainer.innerHTML = '';
+            const offBtn = document.createElement('button');
+            offBtn.className = 'menu-option selected';
+            offBtn.textContent = 'Kapalı';
+            offBtn.onclick = () => {
+                for (let i = 0; i < video.textTracks.length; i++) {
+                    video.textTracks[i].mode = 'hidden';
+                }
+                updateSelectedUI(offBtn, subtitlesListContainer);
+            };
+            subtitlesListContainer.appendChild(offBtn);
+
+            if (video.textTracks && video.textTracks.length > 0) {
+                for (let i = 0; i < video.textTracks.length; i++) {
+                    const track = video.textTracks[i];
+                    const btn = document.createElement('button');
+                    btn.className = 'menu-option';
+                    btn.textContent = track.label || `Altyazı ${i + 1}`;
+                    btn.onclick = () => {
+                        for (let j = 0; j < video.textTracks.length; j++) {
+                            video.textTracks[j].mode = j === i ? 'showing' : 'hidden';
+                        }
+                        updateSelectedUI(btn, subtitlesListContainer);
+                    };
+                    subtitlesListContainer.appendChild(btn);
+                }
+            }
         }
 
-        settingsBtn.addEventListener('click', (e) => { e.stopPropagation(); settingsDropdown.classList.toggle('active'); });
-        document.addEventListener('click', () => settingsDropdown.classList.remove('active'));
-        settingsDropdown.addEventListener('click', (e) => e.stopPropagation());
+        function updateSelectedUI(el, container) {
+            container.querySelectorAll('.menu-option').forEach(o => o.classList.remove('selected'));
+            el.classList.add('selected');
+            settingsDropdown.classList.remove('active');
+            subtitlesDropdown.classList.remove('active');
+        }
 
+        // Menü Açma / Kapama Mantığı
+        settingsBtn.addEventListener('click', (e) => { 
+            e.stopPropagation(); 
+            settingsDropdown.classList.toggle('active'); 
+            subtitlesDropdown.classList.remove('active');
+        });
+
+        subtitlesBtn.addEventListener('click', (e) => { 
+            e.stopPropagation(); 
+            subtitlesDropdown.classList.toggle('active'); 
+            settingsDropdown.classList.remove('active');
+        });
+
+        document.addEventListener('click', () => {
+            settingsDropdown.classList.remove('active');
+            subtitlesDropdown.classList.remove('active');
+        });
+        settingsDropdown.addEventListener('click', (e) => e.stopPropagation());
+        subtitlesDropdown.addEventListener('click', (e) => e.stopPropagation());
+
+        // Sadece alttaki butonla oynat/durdur (Ekrana tıklayınca durma engellendi)
         playPauseBtn.addEventListener('click', togglePlay);
-        video.addEventListener('click', togglePlay);
+        
         function togglePlay() {
             if (video.paused) { video.play(); playPauseBtn.textContent = '❚❚'; }
             else { video.pause(); playPauseBtn.textContent = '▶'; }
@@ -410,8 +486,9 @@
         video.addEventListener('play', () => playPauseBtn.textContent = '❚❚');
         video.addEventListener('pause', () => playPauseBtn.textContent = '▶');
 
-        // Saat:Dakika:Saniye Formatı
+        // Süre Takibi
         video.addEventListener('timeupdate', () => {
+            if (isDragging) return;
             const current = video.currentTime;
             const duration = video.duration;
 
@@ -432,11 +509,60 @@
             }
         });
 
-        progressContainer.addEventListener('click', (e) => {
+        // Üzerine Basılı Tutup Çekerek İlerleme (Scrubbing / Sürükleme Hissi)
+        function getClampedPos(e) {
             const rect = progressContainer.getBoundingClientRect();
-            const pos = (e.clientX - rect.left) / rect.width;
-            if (isFinite(video.duration)) video.currentTime = pos * video.duration;
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            let pos = (clientX - rect.left) / rect.width;
+            return Math.max(0, Math.min(1, pos));
+        }
+
+        progressContainer.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            updateDragPosition(e);
         });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            updateDragPosition(e);
+        });
+
+        document.addEventListener('mouseup', (e) => {
+            if (!isDragging) return;
+            isDragging = false;
+            if (isFinite(video.duration) && video.duration > 0) {
+                const pos = getClampedPos(e);
+                video.currentTime = pos * video.duration;
+            }
+        });
+
+        // Dokunmatik (Mobil) Sürükleme Desteği
+        progressContainer.addEventListener('touchstart', (e) => {
+            isDragging = true;
+            updateDragPosition(e);
+        });
+
+        document.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
+            updateDragPosition(e);
+        });
+
+        document.addEventListener('touchend', (e) => {
+            if (!isDragging) return;
+            isDragging = false;
+            if (isFinite(video.duration) && video.duration > 0 && e.changedTouches) {
+                const pos = getClampedPos(e.changedTouches[0]);
+                video.currentTime = pos * video.duration;
+            }
+        });
+
+        function updateDragPosition(e) {
+            const pos = getClampedPos(e);
+            progressBar.style.width = `${pos * 100}%`;
+            if (isFinite(video.duration) && video.duration > 0) {
+                timeDisplay.textContent = formatTime(pos * video.duration);
+            }
+        }
 
         function formatTime(seconds) {
             const h = Math.floor(seconds / 3600);
@@ -448,6 +574,7 @@
             return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
         }
 
+        // Ses Kontrolleri
         volumeSlider.addEventListener('input', (e) => {
             video.volume = e.target.value;
             video.muted = e.target.value == 0;
@@ -462,10 +589,8 @@
 
         function updateVolumeIcon() {
             if (video.muted || video.volume == 0) {
-                // Sessiz İkonu SVG
                 volumeIconSvg.innerHTML = '<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C22.63 14.85 23 13.47 23 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>';
             } else {
-                // Normal Ses İkonu SVG
                 volumeIconSvg.innerHTML = '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>';
             }
         }
@@ -479,7 +604,7 @@
             playerWrapper.classList.remove('hide-controls');
             clearTimeout(hideTimeout);
             hideTimeout = setTimeout(() => {
-                if (!video.paused && !settingsDropdown.classList.contains('active')) {
+                if (!video.paused && !settingsDropdown.classList.contains('active') && !subtitlesDropdown.classList.contains('active')) {
                     playerWrapper.classList.add('hide-controls');
                 }
             }, 3000);
