@@ -404,7 +404,7 @@
         <!-- Ortadaki Büyük Oynat/Durdur İkonu -->
         <div class="center-big-play-btn" id="centerBigPlayBtn">
             <svg id="centerPlayIconSvg" viewBox="0 0 24 24">
-                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                <path d="M8 5v14l11-7z"/>
             </svg>
         </div>
 
@@ -413,8 +413,8 @@
             <div class="overlay-text" id="overlayText">Yayın Yükleniyor...</div>
         </div>
 
-        <!-- Otomatik Başlatma İçin autoplay ve muted eklendi -->
-        <video id="videoElement" autoplay muted playsinline></video>
+        <!-- Ses tam açık, manuel başlatma için hazır video elementi -->
+        <video id="videoElement" playsinline></video>
 
         <div class="controls-container" id="controlsContainer">
             <div class="progress-container" id="progressContainer">
@@ -425,7 +425,7 @@
 
             <div class="controls-row">
                 <div class="controls-left">
-                    <button id="playPauseBtn" title="Oynat/Duraklat (K)">❚❚</button>
+                    <button id="playPauseBtn" title="Oynat/Duraklat (K)">▶</button>
                     
                     <div class="volume-wrapper">
                         <button id="muteBtn" class="custom-svg-btn" title="Sesi Aç/Kapat (M)">
@@ -522,8 +522,8 @@
         let isDragging = false;
 
         function initPlayer() {
-            // Başlangıçta slider değerini ses seviyesine eşitleyelim (muted olduğu için ikon güncellensin)
-            volumeSlider.value = video.volume;
+            video.volume = 1.0;
+            volumeSlider.value = 1.0;
             updateVolumeIcon();
 
             if (Hls.isSupported()) {
@@ -535,13 +535,6 @@
                     hideOverlay();
                     buildQualityMenu(data.levels);
                     buildSubtitleMenu();
-                    
-                    // Otomatik başlatma denemesi (Tarayıcı engeline takılmamak için muted başlatılıp oynatılıyor)
-                    video.play().then(() => {
-                        playPauseBtn.textContent = '❚❚';
-                    }).catch(() => {
-                        playPauseBtn.textContent = '▶';
-                    });
                 });
 
                 hls.on(Hls.Events.ERROR, (event, data) => {
@@ -555,7 +548,6 @@
                 video.addEventListener('loadedmetadata', () => { 
                     hideOverlay(); 
                     buildSubtitleMenu();
-                    video.play().catch(() => playPauseBtn.textContent = '▶'); 
                 });
             }
             resetHideTimer();
