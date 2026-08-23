@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Netflix Tarzı Modern HLS Player</title>
+    <title>Netflix Tarzı Ultimate HLS Player</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         * {
@@ -104,7 +104,7 @@
             transform: translateY(10px);
         }
 
-        /* Gelişmiş Sürüklenebilir İlerleme Çubuğu */
+        /* Gelişmiş Sürüklenebilir İlerleme Çubuğu ve Tooltip */
         .progress-container {
             position: relative;
             width: 100%;
@@ -117,6 +117,26 @@
 
         .progress-container:hover {
             height: 8px;
+        }
+
+        .time-tooltip {
+            position: absolute;
+            bottom: 15px;
+            transform: translateX(-50%);
+            background: rgba(20, 20, 20, 0.9);
+            color: #fff;
+            padding: 4px 8px;
+            font-size: 11px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            pointer-events: none;
+            display: none;
+            white-space: nowrap;
+            z-index: 25;
+        }
+
+        .progress-container:hover .time-tooltip {
+            display: block;
         }
 
         .buffer-bar {
@@ -215,7 +235,7 @@
             accent-color: #E50914;
         }
 
-        /* Netflix Menüleri (Kalite & Altyazı) */
+        /* Menüler (Kalite, Hız, Altyazı) */
         .menu-container {
             position: relative;
         }
@@ -276,6 +296,18 @@
         .icon-btn {
             font-size: 20px;
         }
+
+        .skip-btn {
+            font-size: 13px;
+            font-weight: 600;
+            background: rgba(255,255,255,0.1);
+            padding: 3px 6px;
+            border-radius: 4px;
+        }
+        .skip-btn:hover {
+            background: #E50914;
+            color: #fff;
+        }
     </style>
 </head>
 <body>
@@ -289,18 +321,23 @@
         <video id="videoElement" playsinline></video>
 
         <div class="controls-container" id="controlsContainer">
-            <!-- Sürüklenebilir İlerleme Çubuğu -->
+            <!-- Sürüklenebilir İlerleme Çubuğu ve Önizleme Balonu -->
             <div class="progress-container" id="progressContainer">
+                <div class="time-tooltip" id="timeTooltip">00:00</div>
                 <div class="buffer-bar" id="bufferBar"></div>
                 <div class="progress-bar" id="progressBar"></div>
             </div>
 
             <div class="controls-row">
                 <div class="controls-left">
-                    <button id="playPauseBtn" class="icon-btn" title="Oynat/Duraklat">❚❚</button>
+                    <button id="playPauseBtn" class="icon-btn" title="Oynat/Duraklat (K)">❚❚</button>
                     
+                    <!-- 10 Saniye İleri / Geri Sarma Tuşları -->
+                    <button id="rewindBtn" class="skip-btn" title="10 Saniye Geri">-10s</button>
+                    <button id="forwardBtn" class="skip-btn" title="10 Saniye İleri">+10s</button>
+
                     <div class="volume-wrapper">
-                        <button id="muteBtn" class="custom-svg-btn" title="Sesi Aç/Kapat">
+                        <button id="muteBtn" class="custom-svg-btn" title="Sesi Aç/Kapat (M)">
                             <svg id="volumeIconSvg" viewBox="0 0 24 24">
                                 <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
                             </svg>
@@ -313,7 +350,7 @@
                 </div>
 
                 <div class="controls-right">
-                    <!-- Altyazı Butonu ve Menüsü -->
+                    <!-- Altyazı -->
                     <div class="menu-container">
                         <button id="subtitlesBtn" class="custom-svg-btn" title="Altyazılar">
                             <svg viewBox="0 0 24 24">
@@ -326,16 +363,31 @@
                         </div>
                     </div>
 
-                    <!-- Kalite / Ayarlar Butonu ve Menüsü -->
+                    <!-- Kalite ve Hız (Ayarlar) -->
                     <div class="menu-container">
                         <button id="settingsBtn" class="icon-btn" title="Ayarlar">⚙️</button>
                         <div class="dropdown-panel" id="settingsDropdown">
                             <div class="dropdown-header">Kalite</div>
                             <div id="qualityListContainer"></div>
+                            <div class="dropdown-header" style="margin-top:8px;">Hız</div>
+                            <div id="speedListContainer">
+                                <button class="menu-option" onclick="setSpeed(0.5)">0.5x</button>
+                                <button class="menu-option selected" onclick="setSpeed(1)">Normal (1x)</button>
+                                <button class="menu-option" onclick="setSpeed(1.25)">1.25x</button>
+                                <button class="menu-option" onclick="setSpeed(1.5)">1.5x</button>
+                                <button class="menu-option" onclick="setSpeed(2)">2.0x</button>
+                            </div>
                         </div>
                     </div>
 
-                    <button id="fullscreenBtn" class="icon-btn" title="Tam Ekran">⛶</button>
+                    <!-- Resim İçinde Resim (PiP) -->
+                    <button id="pipBtn" class="custom-svg-btn" title="Resim İçinde Resim">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M19 7h-8v6h8V7zm2-4H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16.01H3V4.99h18v14.02z"/>
+                        </svg>
+                    </button>
+
+                    <button id="fullscreenBtn" class="icon-btn" title="Tam Ekran (F)">⛶</button>
                 </div>
             </div>
         </div>
@@ -347,6 +399,8 @@
         const playerOverlay = document.getElementById('playerOverlay');
         const overlayText = document.getElementById('overlayText');
         const playPauseBtn = document.getElementById('playPauseBtn');
+        const rewindBtn = document.getElementById('rewindBtn');
+        const forwardBtn = document.getElementById('forwardBtn');
         const muteBtn = document.getElementById('muteBtn');
         const volumeIconSvg = document.getElementById('volumeIconSvg');
         const volumeSlider = document.getElementById('volumeSlider');
@@ -355,12 +409,14 @@
         const progressContainer = document.getElementById('progressContainer');
         const progressBar = document.getElementById('progressBar');
         const bufferBar = document.getElementById('bufferBar');
+        const timeTooltip = document.getElementById('timeTooltip');
         const settingsBtn = document.getElementById('settingsBtn');
         const settingsDropdown = document.getElementById('settingsDropdown');
         const qualityListContainer = document.getElementById('qualityListContainer');
         const subtitlesBtn = document.getElementById('subtitlesBtn');
         const subtitlesDropdown = document.getElementById('subtitlesDropdown');
         const subtitlesListContainer = document.getElementById('subtitlesListContainer');
+        const pipBtn = document.getElementById('pipBtn');
         const fullscreenBtn = document.getElementById('fullscreenBtn');
 
         const streamUrl = 'https://Pz4qT7nW1mR9sH2vL5xK8jG3y.medya.trt.com.tr/master.m3u8';
@@ -399,7 +455,6 @@
 
         function hideOverlay() { playerOverlay.classList.remove('active'); }
 
-        // Kalite Menüsü Oluşturma
         function buildQualityMenu(levels) {
             qualityListContainer.innerHTML = '';
             const autoBtn = document.createElement('button');
@@ -417,7 +472,6 @@
             });
         }
 
-        // Altyazı Menüsü Oluşturma
         function buildSubtitleMenu() {
             subtitlesListContainer.innerHTML = '';
             const offBtn = document.createElement('button');
@@ -455,7 +509,16 @@
             subtitlesDropdown.classList.remove('active');
         }
 
-        // Menü Açma / Kapama Mantığı
+        // Hız Seçimi Fonksiyonu
+        function setSpeed(speed) {
+            video.playbackRate = speed;
+            document.querySelectorAll('#speedListContainer .menu-option').forEach(btn => {
+                btn.classList.toggle('selected', btn.textContent.includes(`${speed}x`) || (speed === 1 && btn.textContent.includes('Normal')));
+            });
+            settingsDropdown.classList.remove('active');
+        }
+
+        // Menü Yönetimi
         settingsBtn.addEventListener('click', (e) => { 
             e.stopPropagation(); 
             settingsDropdown.classList.toggle('active'); 
@@ -475,9 +538,8 @@
         settingsDropdown.addEventListener('click', (e) => e.stopPropagation());
         subtitlesDropdown.addEventListener('click', (e) => e.stopPropagation());
 
-        // Sadece alttaki butonla oynat/durdur (Ekrana tıklayınca durma engellendi)
+        // Oynat / Durdur
         playPauseBtn.addEventListener('click', togglePlay);
-        
         function togglePlay() {
             if (video.paused) { video.play(); playPauseBtn.textContent = '❚❚'; }
             else { video.pause(); playPauseBtn.textContent = '▶'; }
@@ -486,7 +548,11 @@
         video.addEventListener('play', () => playPauseBtn.textContent = '❚❚');
         video.addEventListener('pause', () => playPauseBtn.textContent = '▶');
 
-        // Süre Takibi
+        // 10 Saniye İleri / Geri Butonları
+        rewindBtn.addEventListener('click', () => { video.currentTime = Math.max(0, video.currentTime - 10); });
+        forwardBtn.addEventListener('click', () => { if (isFinite(video.duration)) video.currentTime = Math.min(video.duration, video.currentTime + 10); });
+
+        // Süre Takibi ve Tooltip Önizleme
         video.addEventListener('timeupdate', () => {
             if (isDragging) return;
             const current = video.currentTime;
@@ -509,50 +575,41 @@
             }
         });
 
-        // Üzerine Basılı Tutup Çekerek İlerleme (Scrubbing / Sürükleme Hissi)
+        progressContainer.addEventListener('mousemove', (e) => {
+            const rect = progressContainer.getBoundingClientRect();
+            const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+            timeTooltip.style.left = `${pos * 100}%`;
+            if (isFinite(video.duration) && video.duration > 0) {
+                timeTooltip.textContent = formatTime(pos * video.duration);
+            } else {
+                timeTooltip.textContent = "Canlı";
+            }
+        });
+
+        // Sürükleme (Scrubbing)
         function getClampedPos(e) {
             const rect = progressContainer.getBoundingClientRect();
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            let pos = (clientX - rect.left) / rect.width;
-            return Math.max(0, Math.min(1, pos));
+            return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
         }
 
-        progressContainer.addEventListener('mousedown', (e) => {
-            isDragging = true;
-            updateDragPosition(e);
-        });
-
-        document.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-            updateDragPosition(e);
-        });
-
+        progressContainer.addEventListener('mousedown', (e) => { isDragging = true; updateDragPosition(e); });
+        document.addEventListener('mousemove', (e) => { if (!isDragging) return; updateDragPosition(e); });
         document.addEventListener('mouseup', (e) => {
             if (!isDragging) return;
             isDragging = false;
             if (isFinite(video.duration) && video.duration > 0) {
-                const pos = getClampedPos(e);
-                video.currentTime = pos * video.duration;
+                video.currentTime = getClampedPos(e) * video.duration;
             }
         });
 
-        // Dokunmatik (Mobil) Sürükleme Desteği
-        progressContainer.addEventListener('touchstart', (e) => {
-            isDragging = true;
-            updateDragPosition(e);
-        });
-
-        document.addEventListener('touchmove', (e) => {
-            if (!isDragging) return;
-            updateDragPosition(e);
-        });
-
+        progressContainer.addEventListener('touchstart', (e) => { isDragging = true; updateDragPosition(e); });
+        document.addEventListener('touchmove', (e) => { if (!isDragging) return; updateDragPosition(e); });
         document.addEventListener('touchend', (e) => {
             if (!isDragging) return;
             isDragging = false;
             if (isFinite(video.duration) && video.duration > 0 && e.changedTouches) {
-                const pos = getClampedPos(e.changedTouches[0]);
-                video.currentTime = pos * video.duration;
+                video.currentTime = getClampedPos(e.changedTouches[0]) * video.duration;
             }
         });
 
@@ -595,11 +652,64 @@
             }
         }
 
-        fullscreenBtn.addEventListener('click', () => {
-            if (!document.fullscreenElement) playerWrapper.requestFullscreen().catch(err => console.error(err));
-            else document.exitFullscreen();
+        // Resim İçinde Resim (PiP)
+        pipBtn.addEventListener('click', async () => {
+            try {
+                if (document.pictureInPictureElement) {
+                    await document.exitPictureInPicture();
+                } else if (document.pictureInPictureEnabled) {
+                    await video.requestPictureInPicture();
+                }
+            } catch (err) {
+                console.error("PiP Hatası:", err);
+            }
         });
 
+        // Tam Ekran
+        fullscreenBtn.addEventListener('click', toggleFullscreen);
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                playerWrapper.requestFullscreen().catch(err => console.error(err));
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        // GELİŞMİŞ KLAVYE KISAYOLLARI (Hotkeys)
+        document.addEventListener('keydown', (e) => {
+            // Eğer form veya input içindeyse tetiklenmesin
+            if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+
+            const key = e.key.toLowerCase();
+            if (key === ' ' || key === 'k') {
+                e.preventDefault();
+                togglePlay();
+            } else if (key === 'f') {
+                e.preventDefault();
+                toggleFullscreen();
+            } else if (key === 'm') {
+                e.preventDefault();
+                muteBtn.click();
+            } else if (key === 'arrowright') {
+                e.preventDefault();
+                forwardBtn.click();
+            } else if (key === 'arrowleft') {
+                e.preventDefault();
+                rewindBtn.click();
+            } else if (key === 'arrowup') {
+                e.preventDefault();
+                video.volume = Math.min(1, video.volume + 0.05);
+                volumeSlider.value = video.volume;
+                updateVolumeIcon();
+            } else if (key === 'arrowdown') {
+                e.preventDefault();
+                video.volume = Math.max(0, video.volume - 0.05);
+                volumeSlider.value = video.volume;
+                updateVolumeIcon();
+            }
+        });
+
+        // Kontrolleri Otomatik Gizleme
         playerWrapper.addEventListener('mousemove', () => {
             playerWrapper.classList.remove('hide-controls');
             clearTimeout(hideTimeout);
