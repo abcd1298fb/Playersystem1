@@ -413,7 +413,8 @@
             <div class="overlay-text" id="overlayText">Yayın Yükleniyor...</div>
         </div>
 
-        <video id="videoElement" playsinline></video>
+        <!-- Otomatik Başlatma İçin autoplay ve muted eklendi -->
+        <video id="videoElement" autoplay muted playsinline></video>
 
         <div class="controls-container" id="controlsContainer">
             <div class="progress-container" id="progressContainer">
@@ -521,6 +522,10 @@
         let isDragging = false;
 
         function initPlayer() {
+            // Başlangıçta slider değerini ses seviyesine eşitleyelim (muted olduğu için ikon güncellensin)
+            volumeSlider.value = video.volume;
+            updateVolumeIcon();
+
             if (Hls.isSupported()) {
                 hls = new Hls({ maxBufferLength: 30, liveSyncDurationCount: 3 });
                 hls.loadSource(streamUrl);
@@ -530,7 +535,13 @@
                     hideOverlay();
                     buildQualityMenu(data.levels);
                     buildSubtitleMenu();
-                    video.play().catch(() => playPauseBtn.textContent = '▶');
+                    
+                    // Otomatik başlatma denemesi (Tarayıcı engeline takılmamak için muted başlatılıp oynatılıyor)
+                    video.play().then(() => {
+                        playPauseBtn.textContent = '❚❚';
+                    }).catch(() => {
+                        playPauseBtn.textContent = '▶';
+                    });
                 });
 
                 hls.on(Hls.Events.ERROR, (event, data) => {
@@ -544,7 +555,7 @@
                 video.addEventListener('loadedmetadata', () => { 
                     hideOverlay(); 
                     buildSubtitleMenu();
-                    video.play(); 
+                    video.play().catch(() => playPauseBtn.textContent = '▶'); 
                 });
             }
             resetHideTimer();
@@ -618,14 +629,14 @@
             e.stopPropagation(); 
             settingsDropdown.classList.toggle('active'); 
             subtitlesDropdown.classList.remove('active');
-            resetHideTimer(); // Menü açıldığında kapanma süresini sıfırla
+            resetHideTimer(); 
         });
 
         subtitlesBtn.addEventListener('click', (e) => { 
             e.stopPropagation(); 
             subtitlesDropdown.classList.toggle('active'); 
             settingsDropdown.classList.remove('active');
-            resetHideTimer(); // Menü açıldığında kapanma süresini sıfırla
+            resetHideTimer(); 
         });
 
         document.addEventListener('click', () => {
@@ -702,11 +713,9 @@
                 e.preventDefault();
             } else {
                 if (playerWrapper.classList.contains('hide-controls')) {
-                    // Gizliyse görünür yap ve 3 saniye sayacını başlat
                     playerWrapper.classList.remove('hide-controls');
                     resetHideTimer();
                 } else {
-                    // Zaten açıksa dokunulduğunda süreyi sıfırla veya açık tut
                     resetHideTimer();
                 }
             }
@@ -850,7 +859,6 @@
             playerWrapper.classList.remove('hide-controls');
             clearTimeout(hideTimeout);
             hideTimeout = setTimeout(() => {
-                // Video oynuyorsa ve açık menü yoksa 3 saniye sonra gizle
                 if (!video.paused && !settingsDropdown.classList.contains('active') && !subtitlesDropdown.classList.contains('active')) {
                     playerWrapper.classList.add('hide-controls');
                 }
