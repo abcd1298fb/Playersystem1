@@ -25,7 +25,7 @@
         .player-wrapper {
             position: relative;
             width: 100vw;
-            height: 100vh;
+            height: 100svh; /* Mobil tarayıcı boşluklarını hesaba katar */
             background: #000;
             display: flex;
             align-items: center;
@@ -33,13 +33,11 @@
             overflow: hidden;
         }
 
-        /* Üstte ve altta boşluk kalmasını (contain) ve kontrollerin rahat görünmesini sağlar */
         video {
             width: 100%;
             height: 100%;
             object-fit: contain;
             display: block;
-            max-height: calc(100vh - 60px); 
         }
 
         /* YouTube Tarzı Ortada Sağ/Sol 10 Saniye Butonları */
@@ -161,14 +159,14 @@
             to { transform: rotate(360deg); }
         }
 
-        /* Kontrol Paneli */
+        /* Kontrol Paneli - Mobilde Altta Kalmaması İçin Güvenli Alan Eklendi */
         .controls-container {
             position: absolute;
             bottom: 0;
             left: 0;
             right: 0;
             background: linear-gradient(180deg, rgba(20,20,20,0) 0%, rgba(20,20,20,0.85) 40%, rgba(20,20,20,0.98) 100%);
-            padding: 20px 15px 12px 15px;
+            padding: 20px 15px calc(15px + env(safe-area-inset-bottom, 0px)) 15px;
             display: flex;
             flex-direction: column;
             gap: 10px;
@@ -270,7 +268,6 @@
             transform: scale(1.1);
         }
 
-        /* Oynat/Durdur Butonu Boyutu Büyütüldü */
         #playPauseBtn {
             font-size: 22px;
             padding: 4px;
@@ -321,7 +318,7 @@
             accent-color: #E50914;
         }
 
-        /* Ayarlar ve Altyazı Menüleri Yan Yana */
+        /* Ayarlar ve Altyazı Menüleri */
         .menu-container {
             position: relative;
         }
@@ -658,9 +655,9 @@
 
         function showCenterAnimation(state) {
             if (state === 'play') {
-                centerPlayIconSvg.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>'; // Duraklatma ikonu (oynatıldıktan sonra basmak için)
+                centerPlayIconSvg.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
             } else {
-                centerPlayIconSvg.innerHTML = '<path d="M8 5v14l11-7z"/>'; // Oynatma ikonu (durduğunda basmak için)
+                centerPlayIconSvg.innerHTML = '<path d="M8 5v14l11-7z"/>';
             }
             centerBigPlayBtn.classList.add('show');
             clearTimeout(centerAnimTimeout);
@@ -675,7 +672,6 @@
             resetHideTimer();
         });
 
-        // Ortadaki -10s ve +10s Buton İşlevleri
         overlayRewind.addEventListener('click', (e) => {
             e.stopPropagation();
             video.currentTime = Math.max(0, video.currentTime - 10);
@@ -688,7 +684,6 @@
             resetHideTimer();
         });
 
-        // Tıklama / Dokunma ile Kontrolleri Açma / Kapatma ve Çift Tıklama ile Tam Ekran
         let lastTap = 0;
         playerWrapper.addEventListener('click', (e) => {
             if (e.target.closest('.controls-container') || e.target.closest('.seek-overlay-btn') || e.target.closest('.center-big-play-btn')) return;
@@ -711,7 +706,6 @@
             lastTap = currentTime;
         });
 
-        // Süre Takibi ve Tooltip
         video.addEventListener('timeupdate', () => {
             if (isDragging) return;
             const current = video.currentTime;
@@ -787,7 +781,6 @@
             return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
         }
 
-        // Ses
         volumeSlider.addEventListener('input', (e) => {
             video.volume = e.target.value;
             video.muted = e.target.value == 0;
@@ -808,7 +801,6 @@
             }
         }
 
-        // PiP & Tam Ekran
         pipBtn.addEventListener('click', async () => {
             try {
                 if (document.pictureInPictureElement) await document.exitPictureInPicture();
@@ -825,7 +817,6 @@
             }
         }
 
-        // Klavye Kısayolları
         document.addEventListener('keydown', (e) => {
             if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
             const key = e.key.toLowerCase();
@@ -838,7 +829,6 @@
             else if (key === 'arrowdown') { e.preventDefault(); video.volume = Math.max(0, video.volume - 0.05); volumeSlider.value = video.volume; updateVolumeIcon(); }
         });
 
-        // Kontrolleri Otomatik Gizleme Mantığı
         function resetHideTimer() {
             playerWrapper.classList.remove('hide-controls');
             clearTimeout(hideTimeout);
