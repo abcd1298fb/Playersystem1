@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Netflix Tarzı Ultimate HLS Player</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
@@ -12,28 +12,25 @@
             padding: 0;
         }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: #141414;
+        body, html {
+            width: 100%;
+            height: 100%;
+            background: #000;
             color: #fff;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
             overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             user-select: none;
         }
 
         .player-wrapper {
             position: relative;
-            width: 1000px;
-            max-width: 100%;
-            aspect-ratio: 16/9;
+            width: 100vw;
+            height: 100vh;
             background: #000;
-            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             overflow: hidden;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.9);
         }
 
         video {
@@ -43,11 +40,33 @@
             display: block;
         }
 
+        /* YouTube Tarzı İleri / Geri Sarma Efekt Alanları */
+        .double-tap-effect {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 25%;
+            z-index: 15;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.8);
+            font-size: 24px;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            background: rgba(0,0,0,0.2);
+        }
+        .double-tap-left { left: 0; }
+        .double-tap-right { right: 0; }
+        .double-tap-effect.active { opacity: 1; }
+
         /* Yüklenme ve Hata Ekranı */
         .player-overlay {
             position: absolute;
             inset: 0;
-            background: rgba(20, 20, 20, 0.85);
+            background: rgba(20, 20, 20, 0.9);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -55,7 +74,7 @@
             transition: opacity 0.4s ease;
             opacity: 0;
             pointer-events: none;
-            z-index: 10;
+            z-index: 25;
         }
 
         .player-overlay.active {
@@ -89,13 +108,13 @@
             bottom: 0;
             left: 0;
             right: 0;
-            background: linear-gradient(180deg, rgba(20,20,20,0) 0%, rgba(20,20,20,0.75) 40%, rgba(20,20,20,0.95) 100%);
-            padding: 25px 20px 15px 20px;
+            background: linear-gradient(180deg, rgba(20,20,20,0) 0%, rgba(20,20,20,0.8) 40%, rgba(20,20,20,0.98) 100%);
+            padding: 20px 15px 12px 15px;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
             transition: opacity 0.3s ease, transform 0.3s ease;
-            z-index: 20;
+            z-index: 30;
         }
 
         .player-wrapper.hide-controls .controls-container {
@@ -104,7 +123,7 @@
             transform: translateY(10px);
         }
 
-        /* Gelişmiş Sürüklenebilir İlerleme Çubuğu ve Tooltip */
+        /* İlerleme Çubuğu ve Tooltip */
         .progress-container {
             position: relative;
             width: 100%;
@@ -132,7 +151,7 @@
             pointer-events: none;
             display: none;
             white-space: nowrap;
-            z-index: 25;
+            z-index: 35;
         }
 
         .progress-container:hover .time-tooltip {
@@ -170,7 +189,7 @@
         .controls-left, .controls-right {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 12px;
         }
 
         button {
@@ -190,7 +209,7 @@
         }
 
         .time-text {
-            font-size: 13px;
+            font-size: 12px;
             color: #e5e5e5;
             font-variant-numeric: tabular-nums;
             font-weight: 500;
@@ -201,21 +220,20 @@
             color: white;
             font-size: 10px;
             font-weight: 800;
-            padding: 3px 6px;
+            padding: 2px 5px;
             border-radius: 3px;
             letter-spacing: 1px;
         }
 
-        /* Ses Bölümü ve SVG İkonlar */
         .volume-wrapper {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
 
         .custom-svg-btn svg {
-            width: 22px;
-            height: 22px;
+            width: 20px;
+            height: 20px;
             fill: #fff;
             transition: fill 0.15s;
         }
@@ -226,7 +244,7 @@
 
         input[type="range"] {
             -webkit-appearance: none;
-            width: 70px;
+            width: 60px;
             height: 4px;
             background: rgba(255,255,255,0.3);
             border-radius: 2px;
@@ -235,7 +253,7 @@
             accent-color: #E50914;
         }
 
-        /* Menüler (Kalite, Hız, Altyazı) */
+        /* Menüler */
         .menu-container {
             position: relative;
         }
@@ -247,13 +265,13 @@
             background: rgba(28, 28, 28, 0.95);
             border: 1px solid rgba(255,255,255,0.1);
             border-radius: 6px;
-            width: 170px;
-            padding: 8px 0;
+            width: 150px;
+            padding: 6px 0;
             display: none;
             flex-direction: column;
             box-shadow: 0 10px 25px rgba(0,0,0,0.6);
             backdrop-filter: blur(5px);
-            z-index: 30;
+            z-index: 40;
         }
 
         .dropdown-panel.active {
@@ -261,13 +279,13 @@
         }
 
         .dropdown-header {
-            font-size: 11px;
+            font-size: 10px;
             color: #8c8c8c;
-            padding: 6px 15px;
+            padding: 5px 12px;
             font-weight: 700;
             text-transform: uppercase;
             border-bottom: 1px solid rgba(255,255,255,0.08);
-            margin-bottom: 4px;
+            margin-bottom: 3px;
         }
 
         .menu-option {
@@ -275,8 +293,8 @@
             border: none;
             color: #d2d2d2;
             text-align: left;
-            padding: 8px 15px;
-            font-size: 13px;
+            padding: 7px 12px;
+            font-size: 12px;
             width: 100%;
             cursor: pointer;
             transition: background 0.1s, color 0.1s;
@@ -294,25 +312,23 @@
         }
 
         .icon-btn {
-            font-size: 20px;
+            font-size: 18px;
         }
 
-        .skip-btn {
-            font-size: 13px;
-            font-weight: 600;
-            background: rgba(255,255,255,0.1);
-            padding: 3px 6px;
-            border-radius: 4px;
-        }
-        .skip-btn:hover {
-            background: #E50914;
-            color: #fff;
+        @media (max-width: 600px) {
+            .volume-wrapper input[type="range"] {
+                display: none; /* Mobilde ses çubuğunu gizleyip yerden tasarruf edelim */
+            }
         }
     </style>
 </head>
 <body>
 
     <div class="player-wrapper" id="playerWrapper">
+        <!-- YouTube Tarzı Çift Tıklama Efektleri -->
+        <div class="double-tap-effect double-tap-left" id="tapLeft">« -10s</div>
+        <div class="double-tap-effect double-tap-right" id="tapRight">+10s »</div>
+
         <div class="player-overlay active" id="playerOverlay">
             <div class="netflix-spinner"></div>
             <div class="overlay-text" id="overlayText">Yayın Yükleniyor...</div>
@@ -321,7 +337,6 @@
         <video id="videoElement" playsinline></video>
 
         <div class="controls-container" id="controlsContainer">
-            <!-- Sürüklenebilir İlerleme Çubuğu ve Önizleme Balonu -->
             <div class="progress-container" id="progressContainer">
                 <div class="time-tooltip" id="timeTooltip">00:00</div>
                 <div class="buffer-bar" id="bufferBar"></div>
@@ -332,10 +347,6 @@
                 <div class="controls-left">
                     <button id="playPauseBtn" class="icon-btn" title="Oynat/Duraklat (K)">❚❚</button>
                     
-                    <!-- 10 Saniye İleri / Geri Sarma Tuşları -->
-                    <button id="rewindBtn" class="skip-btn" title="10 Saniye Geri">-10s</button>
-                    <button id="forwardBtn" class="skip-btn" title="10 Saniye İleri">+10s</button>
-
                     <div class="volume-wrapper">
                         <button id="muteBtn" class="custom-svg-btn" title="Sesi Aç/Kapat (M)">
                             <svg id="volumeIconSvg" viewBox="0 0 24 24">
@@ -369,7 +380,7 @@
                         <div class="dropdown-panel" id="settingsDropdown">
                             <div class="dropdown-header">Kalite</div>
                             <div id="qualityListContainer"></div>
-                            <div class="dropdown-header" style="margin-top:8px;">Hız</div>
+                            <div class="dropdown-header" style="margin-top:6px;">Hız</div>
                             <div id="speedListContainer">
                                 <button class="menu-option" onclick="setSpeed(0.5)">0.5x</button>
                                 <button class="menu-option selected" onclick="setSpeed(1)">Normal (1x)</button>
@@ -380,7 +391,7 @@
                         </div>
                     </div>
 
-                    <!-- Resim İçinde Resim (PiP) -->
+                    <!-- PiP -->
                     <button id="pipBtn" class="custom-svg-btn" title="Resim İçinde Resim">
                         <svg viewBox="0 0 24 24">
                             <path d="M19 7h-8v6h8V7zm2-4H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16.01H3V4.99h18v14.02z"/>
@@ -397,10 +408,7 @@
         const video = document.getElementById('videoElement');
         const playerWrapper = document.getElementById('playerWrapper');
         const playerOverlay = document.getElementById('playerOverlay');
-        const overlayText = document.getElementById('overlayText');
         const playPauseBtn = document.getElementById('playPauseBtn');
-        const rewindBtn = document.getElementById('rewindBtn');
-        const forwardBtn = document.getElementById('forwardBtn');
         const muteBtn = document.getElementById('muteBtn');
         const volumeIconSvg = document.getElementById('volumeIconSvg');
         const volumeSlider = document.getElementById('volumeSlider');
@@ -418,6 +426,8 @@
         const subtitlesListContainer = document.getElementById('subtitlesListContainer');
         const pipBtn = document.getElementById('pipBtn');
         const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const tapLeft = document.getElementById('tapLeft');
+        const tapRight = document.getElementById('tapRight');
 
         const streamUrl = 'https://Pz4qT7nW1mR9sH2vL5xK8jG3y.medya.trt.com.tr/master.m3u8';
         let hls = null;
@@ -509,7 +519,6 @@
             subtitlesDropdown.classList.remove('active');
         }
 
-        // Hız Seçimi Fonksiyonu
         function setSpeed(speed) {
             video.playbackRate = speed;
             document.querySelectorAll('#speedListContainer .menu-option').forEach(btn => {
@@ -518,7 +527,6 @@
             settingsDropdown.classList.remove('active');
         }
 
-        // Menü Yönetimi
         settingsBtn.addEventListener('click', (e) => { 
             e.stopPropagation(); 
             settingsDropdown.classList.toggle('active'); 
@@ -538,21 +546,53 @@
         settingsDropdown.addEventListener('click', (e) => e.stopPropagation());
         subtitlesDropdown.addEventListener('click', (e) => e.stopPropagation());
 
-        // Oynat / Durdur
-        playPauseBtn.addEventListener('click', togglePlay);
         function togglePlay() {
             if (video.paused) { video.play(); playPauseBtn.textContent = '❚❚'; }
             else { video.pause(); playPauseBtn.textContent = '▶'; }
         }
 
+        playPauseBtn.addEventListener('click', togglePlay);
         video.addEventListener('play', () => playPauseBtn.textContent = '❚❚');
         video.addEventListener('pause', () => playPauseBtn.textContent = '▶');
 
-        // 10 Saniye İleri / Geri Butonları
-        rewindBtn.addEventListener('click', () => { video.currentTime = Math.max(0, video.currentTime - 10); });
-        forwardBtn.addEventListener('click', () => { if (isFinite(video.duration)) video.currentTime = Math.min(video.duration, video.currentTime + 10); });
+        // YOUTUBE TARZI ÇİFT TIKLAMA / ÇİFT DOKUNMA (Sarma ve Tam Ekran)
+        let lastTap = 0;
+        playerWrapper.addEventListener('click', (e) => {
+            const currentTime = new Date().getTime();
+            const tapLength = currentTime - lastTap;
+            
+            // Eğer kontrollerin üzerine tıklandıysa çift tıklama tetiklenmesin
+            if (e.target.closest('.controls-container')) return;
 
-        // Süre Takibi ve Tooltip Önizleme
+            if (tapLength < 300 && tapLength > 0) {
+                // Çift Tıklama / Dokunma Algılandı
+                const rect = playerWrapper.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                
+                if (clickX < rect.width * 0.3) {
+                    // Sol taraf: 10 saniye geri
+                    video.currentTime = Math.max(0, video.currentTime - 10);
+                    showEffectAnimation(tapLeft);
+                } else if (clickX > rect.width * 0.7) {
+                    // Sağ taraf: 10 saniye ileri
+                    if (isFinite(video.duration)) video.currentTime = Math.min(video.duration, video.currentTime + 10);
+                    showEffectAnimation(tapRight);
+                } else {
+                    // Orta kısım: Tam ekran yap/çık
+                    toggleFullscreen();
+                }
+                e.preventDefault();
+            }
+            lastTap = currentTime;
+        });
+
+        function showEffectAnimation(element) {
+            element.classList.add('active');
+            setTimeout(() => element.classList.remove('active5'), 500);
+            setTimeout(() => element.classList.remove('active'), 400);
+        }
+
+        // Süre Takibi ve Tooltip
         video.addEventListener('timeupdate', () => {
             if (isDragging) return;
             const current = video.currentTime;
@@ -586,7 +626,6 @@
             }
         });
 
-        // Sürükleme (Scrubbing)
         function getClampedPos(e) {
             const rect = progressContainer.getBoundingClientRect();
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -625,13 +664,11 @@
             const h = Math.floor(seconds / 3600);
             const m = Math.floor((seconds % 3600) / 60);
             const s = Math.floor(seconds % 60);
-            if (h > 0) {
-                return `${h}:${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
-            }
+            if (h > 0) return `${h}:${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
             return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
         }
 
-        // Ses Kontrolleri
+        // Ses
         volumeSlider.addEventListener('input', (e) => {
             video.volume = e.target.value;
             video.muted = e.target.value == 0;
@@ -652,20 +689,14 @@
             }
         }
 
-        // Resim İçinde Resim (PiP)
+        // PiP & Tam Ekran
         pipBtn.addEventListener('click', async () => {
             try {
-                if (document.pictureInPictureElement) {
-                    await document.exitPictureInPicture();
-                } else if (document.pictureInPictureEnabled) {
-                    await video.requestPictureInPicture();
-                }
-            } catch (err) {
-                console.error("PiP Hatası:", err);
-            }
+                if (document.pictureInPictureElement) await document.exitPictureInPicture();
+                else if (document.pictureInPictureEnabled) await video.requestPictureInPicture();
+            } catch (err) { console.error("PiP Hatası:", err); }
         });
 
-        // Tam Ekran
         fullscreenBtn.addEventListener('click', toggleFullscreen);
         function toggleFullscreen() {
             if (!document.fullscreenElement) {
@@ -675,38 +706,17 @@
             }
         }
 
-        // GELİŞMİŞ KLAVYE KISAYOLLARI (Hotkeys)
+        // Klavye Kısayolları
         document.addEventListener('keydown', (e) => {
-            // Eğer form veya input içindeyse tetiklenmesin
             if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
-
             const key = e.key.toLowerCase();
-            if (key === ' ' || key === 'k') {
-                e.preventDefault();
-                togglePlay();
-            } else if (key === 'f') {
-                e.preventDefault();
-                toggleFullscreen();
-            } else if (key === 'm') {
-                e.preventDefault();
-                muteBtn.click();
-            } else if (key === 'arrowright') {
-                e.preventDefault();
-                forwardBtn.click();
-            } else if (key === 'arrowleft') {
-                e.preventDefault();
-                rewindBtn.click();
-            } else if (key === 'arrowup') {
-                e.preventDefault();
-                video.volume = Math.min(1, video.volume + 0.05);
-                volumeSlider.value = video.volume;
-                updateVolumeIcon();
-            } else if (key === 'arrowdown') {
-                e.preventDefault();
-                video.volume = Math.max(0, video.volume - 0.05);
-                volumeSlider.value = video.volume;
-                updateVolumeIcon();
-            }
+            if (key === ' ' || key === 'k') { e.preventDefault(); togglePlay(); }
+            else if (key === 'f') { e.preventDefault(); toggleFullscreen(); }
+            else if (key === 'm') { e.preventDefault(); muteBtn.click(); }
+            else if (key === 'arrowright') { e.preventDefault(); if (isFinite(video.duration)) video.currentTime = Math.min(video.duration, video.currentTime + 10); }
+            else if (key === 'arrowleft') { e.preventDefault(); video.currentTime = Math.max(0, video.currentTime - 10); }
+            else if (key === 'arrowup') { e.preventDefault(); video.volume = Math.min(1, video.volume + 0.05); volumeSlider.value = video.volume; updateVolumeIcon(); }
+            else if (key === 'arrowdown') { e.preventDefault(); video.volume = Math.max(0, video.volume - 0.05); volumeSlider.value = video.volume; updateVolumeIcon(); }
         });
 
         // Kontrolleri Otomatik Gizleme
