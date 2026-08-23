@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Netflix Tarzı Özel HLS Player</title>
-    <!-- HLS.js Kütüphanesi -->
+    <title>Netflix Tarzı Modern HLS Player</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         * {
@@ -14,7 +13,7 @@
         }
 
         body {
-            font-family: 'Netflix Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background: #141414;
             color: #fff;
             display: flex;
@@ -68,7 +67,7 @@
             width: 50px;
             height: 50px;
             border: 3px solid rgba(255,255,255,0.2);
-            border-top-color: #E50914; /* Netflix Kırmızısı */
+            border-top-color: #E50914;
             border-radius: 50%;
             animation: spin 0.8s cubic-bezier(0.5, 0, 0.5, 1) infinite;
         }
@@ -78,21 +77,20 @@
             font-size: 15px;
             color: #b3b3b3;
             font-weight: 500;
-            letter-spacing: 0.5px;
         }
 
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
 
-        /* Netflix Kontrol Paneli (Gradient Perde) */
+        /* Kontrol Paneli */
         .controls-container {
             position: absolute;
             bottom: 0;
             left: 0;
             right: 0;
             background: linear-gradient(180deg, rgba(20,20,20,0) 0%, rgba(20,20,20,0.75) 40%, rgba(20,20,20,0.95) 100%);
-            padding: 30px 25px 20px 25px;
+            padding: 25px 20px 15px 20px;
             display: flex;
             flex-direction: column;
             gap: 12px;
@@ -106,7 +104,7 @@
             transform: translateY(10px);
         }
 
-        /* İlerleme ve Buffer Çubuğu (Netflix Kırmızı Tema) */
+        /* İlerleme Çubuğu */
         .progress-container {
             position: relative;
             width: 100%;
@@ -114,7 +112,6 @@
             background: rgba(255, 255, 255, 0.25);
             border-radius: 2px;
             cursor: pointer;
-            overflow: visible;
             transition: height 0.15s ease;
         }
 
@@ -142,24 +139,6 @@
             width: 0%;
         }
 
-        .progress-bar::after {
-            content: '';
-            position: absolute;
-            right: -6px;
-            top: 50%;
-            transform: translateY(-50%) scale(0);
-            width: 12px;
-            height: 12px;
-            background: #E50914;
-            border-radius: 50%;
-            transition: transform 0.1s ease;
-        }
-
-        .progress-container:hover .progress-bar::after {
-            transform: translateY(-50%) scale(1);
-        }
-
-        /* Alt Buton Sırası */
         .controls-row {
             display: flex;
             align-items: center;
@@ -169,7 +148,7 @@
         .controls-left, .controls-right {
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 15px;
         }
 
         button {
@@ -177,7 +156,6 @@
             border: none;
             color: #fff;
             cursor: pointer;
-            font-size: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -186,7 +164,7 @@
 
         button:hover {
             color: #E50914;
-            transform: scale(1.08);
+            transform: scale(1.1);
         }
 
         .time-text {
@@ -201,21 +179,32 @@
             color: white;
             font-size: 10px;
             font-weight: 800;
-            padding: 3px 7px;
+            padding: 3px 6px;
             border-radius: 3px;
             letter-spacing: 1px;
         }
 
-        /* Ses Bölümü */
+        /* Ses Bölümü ve Modern SVG İkon */
         .volume-wrapper {
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
+        .volume-btn svg {
+            width: 22px;
+            height: 22px;
+            fill: #fff;
+            transition: fill 0.15s;
+        }
+
+        .volume-btn:hover svg {
+            fill: #E50914;
+        }
+
         input[type="range"] {
             -webkit-appearance: none;
-            width: 75px;
+            width: 70px;
             height: 4px;
             background: rgba(255,255,255,0.3);
             border-radius: 2px;
@@ -224,19 +213,19 @@
             accent-color: #E50914;
         }
 
-        /* --- NETFLIX TARZI KALİTE / AYARLAR POPUP MENÜSÜ --- */
+        /* Netflix Kalite / Ayarlar Menüsü */
         .settings-menu-container {
             position: relative;
         }
 
         .settings-dropdown {
             position: absolute;
-            bottom: 45px;
+            bottom: 40px;
             right: 0;
             background: rgba(28, 28, 28, 0.95);
             border: 1px solid rgba(255,255,255,0.1);
             border-radius: 6px;
-            width: 180px;
+            width: 160px;
             padding: 8px 0;
             display: none;
             flex-direction: column;
@@ -250,7 +239,7 @@
         }
 
         .settings-header {
-            font-size: 12px;
+            font-size: 11px;
             color: #8c8c8c;
             padding: 6px 15px;
             font-weight: 700;
@@ -274,29 +263,29 @@
         .quality-option:hover {
             background: rgba(255,255,255,0.1);
             color: #fff;
-            transform: none;
         }
 
         .quality-option.selected {
             color: #E50914;
             font-weight: 700;
         }
+
+        .icon-btn {
+            font-size: 20px;
+        }
     </style>
 </head>
 <body>
 
     <div class="player-wrapper" id="playerWrapper">
-        <!-- Netflix Tarzı Yükleniyor Katmanı -->
         <div class="player-overlay active" id="playerOverlay">
             <div class="netflix-spinner"></div>
-            <div class="overlay-text" id="overlayText">TRT Yayını Yükleniyor...</div>
+            <div class="overlay-text" id="overlayText">Yayın Yükleniyor...</div>
         </div>
 
         <video id="videoElement" playsinline></video>
 
-        <!-- Kontrol Çubuğu -->
         <div class="controls-container" id="controlsContainer">
-            <!-- İlerleme Çubuğu -->
             <div class="progress-container" id="progressContainer">
                 <div class="buffer-bar" id="bufferBar"></div>
                 <div class="progress-bar" id="progressBar"></div>
@@ -304,31 +293,32 @@
 
             <div class="controls-row">
                 <div class="controls-left">
-                    <button id="playPauseBtn" title="Oynat / Duraklat">❚❚</button>
+                    <button id="playPauseBtn" class="icon-btn" title="Oynat/Duraklat">❚❚</button>
                     
                     <div class="volume-wrapper">
-                        <button id="muteBtn" title="Sesi Aç/Kapat">🔊</button>
+                        <button id="muteBtn" class="volume-btn" title="Sesi Aç/Kapat">
+                            <!-- Modern SVG Ses İkonu -->
+                            <svg id="volumeIconSvg" viewBox="0 0 24 24">
+                                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                            </svg>
+                        </button>
                         <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="1">
                     </div>
 
-                    <div class="time-text" id="timeDisplay">00:00</div>
+                    <div class="time-text" id="timeDisplay">00:00:00</div>
                     <div class="live-badge" id="liveBadge">CANLI</div>
                 </div>
 
                 <div class="controls-right">
-                    <!-- Netflix Ayarlar / Kalite Butonu -->
                     <div class="settings-menu-container">
-                        <button id="settingsBtn" title="Kalite / Ayarlar">⚙️</button>
-                        
+                        <button id="settingsBtn" class="icon-btn" title="Ayarlar">⚙️</button>
                         <div class="settings-dropdown" id="settingsDropdown">
-                            <div class="settings-header">Görüntü Kalitesi</div>
-                            <div id="qualityListContainer">
-                                <!-- Dinamik kalite seçenekleri buraya dolacak -->
-                            </div>
+                            <div class="settings-header">Kalite</div>
+                            <div id="qualityListContainer"></div>
                         </div>
                     </div>
 
-                    <button id="fullscreenBtn" title="Tam Ekran">⛶</button>
+                    <button id="fullscreenBtn" class="icon-btn" title="Tam Ekran">⛶</button>
                 </div>
             </div>
         </div>
@@ -341,6 +331,7 @@
         const overlayText = document.getElementById('overlayText');
         const playPauseBtn = document.getElementById('playPauseBtn');
         const muteBtn = document.getElementById('muteBtn');
+        const volumeIconSvg = document.getElementById('volumeIconSvg');
         const volumeSlider = document.getElementById('volumeSlider');
         const timeDisplay = document.getElementById('timeDisplay');
         const liveBadge = document.getElementById('liveBadge');
@@ -352,134 +343,80 @@
         const qualityListContainer = document.getElementById('qualityListContainer');
         const fullscreenBtn = document.getElementById('fullscreenBtn');
 
-        // TRT Master M3U8 Linki
         const streamUrl = 'https://Pz4qT7nW1mR9sH2vL5xK8jG3y.medya.trt.com.tr/master.m3u8';
         let hls = null;
         let hideTimeout = null;
 
-        // --- HLS.JS & TRT BAĞLANTISI ---
         function initPlayer() {
             if (Hls.isSupported()) {
-                hls = new Hls({
-                    maxBufferLength: 30,
-                    liveSyncDurationCount: 3,
-                });
-
+                hls = new Hls({ maxBufferLength: 30, liveSyncDurationCount: 3 });
                 hls.loadSource(streamUrl);
                 hls.attachMedia(video);
 
                 hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
                     hideOverlay();
                     buildQualityMenu(data.levels);
-                    video.play().catch(() => {
-                        // Tarayıcı autoplay engellerse sessize alıp tekrar deneyebiliriz veya kullanıcı tıklamasını bekleriz
-                        playPauseBtn.textContent = '▶';
-                    });
+                    video.play().catch(() => playPauseBtn.textContent = '▶');
                 });
 
                 hls.on(Hls.Events.ERROR, (event, data) => {
                     if (data.fatal) {
-                        switch (data.type) {
-                            case Hls.ErrorTypes.NETWORK_ERROR:
-                                overlayText.textContent = 'Yayın ağına bağlanılıyor...';
-                                hls.startLoad();
-                                break;
-                            case Hls.ErrorTypes.MEDIA_ERROR:
-                                overlayText.textContent = 'Medya akışı düzeltiliyor...';
-                                hls.recoverMediaError();
-                                break;
-                            default:
-                                overlayText.textContent = 'Yayın kaynağına ulaşılamadı (CORS/Link Hatası).';
-                                hls.destroy();
-                                break;
-                        }
+                        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
+                        else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
                     }
                 });
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                 video.src = streamUrl;
-                video.addEventListener('loadedmetadata', () => {
-                    hideOverlay();
-                    video.play();
-                });
-            } else {
-                overlayText.textContent = 'Tarayıcınız bu video formatını desteklemiyor.';
+                video.addEventListener('loadedmetadata', () => { hideOverlay(); video.play(); });
             }
         }
 
-        function hideOverlay() {
-            playerOverlay.classList.remove('active');
-        }
+        function hideOverlay() { playerOverlay.classList.remove('active'); }
 
-        // --- NETFLIX KALİTE MENÜSÜ ---
         function buildQualityMenu(levels) {
             qualityListContainer.innerHTML = '';
-            
-            // Otomatik Seçenek
             const autoBtn = document.createElement('button');
             autoBtn.className = 'quality-option selected';
             autoBtn.textContent = 'Otomatik';
-            autoBtn.onclick = () => {
-                hls.currentLevel = -1; // Auto
-                updateSelectedQualityUI(autoBtn);
-            };
+            autoBtn.onclick = () => { hls.currentLevel = -1; updateSelectedUI(autoBtn); };
             qualityListContainer.appendChild(autoBtn);
 
-            // Manuel Kaliteler (Yüksekten düşüğe)
             levels.forEach((level, index) => {
                 const btn = document.createElement('button');
                 btn.className = 'quality-option';
                 btn.textContent = level.height ? `${level.height}p` : `Seviye ${index + 1}`;
-                btn.onclick = () => {
-                    hls.currentLevel = index;
-                    updateSelectedQualityUI(btn);
-                };
+                btn.onclick = () => { hls.currentLevel = index; updateSelectedUI(btn); };
                 qualityListContainer.appendChild(btn);
             });
         }
 
-        function updateSelectedQualityUI(selectedElement) {
-            document.querySelectorAll('.quality-option').forEach(el => el.classList.remove('selected'));
-            selectedElement.classList.add('selected');
+        function updateSelectedUI(el) {
+            document.querySelectorAll('.quality-option').forEach(o => o.classList.remove('selected'));
+            el.classList.add('selected');
             settingsDropdown.classList.remove('active');
         }
 
-        // Ayarlar menüsünü aç/kapat
-        settingsBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            settingsDropdown.classList.toggle('active');
-        });
-
-        // Menü dışına tıklanınca kapat
-        document.addEventListener('click', () => {
-            settingsDropdown.classList.remove('active');
-        });
+        settingsBtn.addEventListener('click', (e) => { e.stopPropagation(); settingsDropdown.classList.toggle('active'); });
+        document.addEventListener('click', () => settingsDropdown.classList.remove('active'));
         settingsDropdown.addEventListener('click', (e) => e.stopPropagation());
 
-        // --- OYNATICI KONTROLLERİ ---
         playPauseBtn.addEventListener('click', togglePlay);
         video.addEventListener('click', togglePlay);
-
         function togglePlay() {
-            if (video.paused) {
-                video.play();
-                playPauseBtn.textContent = '❚❚';
-            } else {
-                video.pause();
-                playPauseBtn.textContent = '▶';
-            }
+            if (video.paused) { video.play(); playPauseBtn.textContent = '❚❚'; }
+            else { video.pause(); playPauseBtn.textContent = '▶'; }
         }
 
         video.addEventListener('play', () => playPauseBtn.textContent = '❚❚');
         video.addEventListener('pause', () => playPauseBtn.textContent = '▶');
 
-        // Süre ve Progress Takibi
+        // Saat:Dakika:Saniye Formatı
         video.addEventListener('timeupdate', () => {
             const current = video.currentTime;
             const duration = video.duration;
 
             if (isFinite(duration) && duration > 0) {
-                const percent = (current / duration) * 100;
-                progressBar.style.width = `${percent}%`;
+                progressBar.style.width = `${(current / duration) * 100}%`;
                 timeDisplay.textContent = formatTime(current);
                 liveBadge.style.display = 'none';
             } else {
@@ -498,18 +435,19 @@
         progressContainer.addEventListener('click', (e) => {
             const rect = progressContainer.getBoundingClientRect();
             const pos = (e.clientX - rect.left) / rect.width;
-            if (isFinite(video.duration)) {
-                video.currentTime = pos * video.duration;
-            }
+            if (isFinite(video.duration)) video.currentTime = pos * video.duration;
         });
 
         function formatTime(seconds) {
-            const m = Math.floor(seconds / 60);
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
             const s = Math.floor(seconds % 60);
-            return `${m}:${s < 10 ? '0' : ''}${s}`;
+            if (h > 0) {
+                return `${h}:${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+            }
+            return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
         }
 
-        // Ses Kontrolleri
         volumeSlider.addEventListener('input', (e) => {
             video.volume = e.target.value;
             video.muted = e.target.value == 0;
@@ -524,22 +462,19 @@
 
         function updateVolumeIcon() {
             if (video.muted || video.volume == 0) {
-                muteBtn.textContent = '🔇';
+                // Sessiz İkonu SVG
+                volumeIconSvg.innerHTML = '<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C22.63 14.85 23 13.47 23 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>';
             } else {
-                muteBtn.textContent = '🔊';
+                // Normal Ses İkonu SVG
+                volumeIconSvg.innerHTML = '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>';
             }
         }
 
-        // Tam Ekran
         fullscreenBtn.addEventListener('click', () => {
-            if (!document.fullscreenElement) {
-                playerWrapper.requestFullscreen().catch(err => console.error(err));
-            } else {
-                document.exitFullscreen();
-            }
+            if (!document.fullscreenElement) playerWrapper.requestFullscreen().catch(err => console.error(err));
+            else document.exitFullscreen();
         });
 
-        // Mouse Hareketsiz Kalınca Kontrolleri Gizle (Netflix Tarzı)
         playerWrapper.addEventListener('mousemove', () => {
             playerWrapper.classList.remove('hide-controls');
             clearTimeout(hideTimeout);
@@ -550,7 +485,6 @@
             }, 3000);
         });
 
-        // Başlat
         initPlayer();
     </script>
 </body>
