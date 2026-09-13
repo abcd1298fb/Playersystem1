@@ -714,7 +714,19 @@ button{
 
 <script>
 
+/* =========================================================
+   GITHUB PAGES VERİ SİSTEMİ
+   Artık server.js / API kullanılmıyor.
+   Maçlar doğrudan maclar.json dosyasından okunuyor.
+========================================================= */
+
+let allMatches = [];
 let currentDate = getLocalDate();
+
+
+/* =========================================================
+   TARİH
+========================================================= */
 
 function getLocalDate(offset = 0){
 
@@ -729,6 +741,7 @@ function getLocalDate(offset = 0){
     return `${year}-${month}-${day}`;
 }
 
+
 function formatDate(date){
 
     const parts = date.split("-");
@@ -736,66 +749,245 @@ function formatDate(date){
     return `${parts[2]}.${parts[1]}.${parts[0]}`;
 }
 
-function formatScore(score){
 
-    if(
-        score === null ||
-        score === undefined
-    ){
-        return "-";
-    }
+/* =========================================================
+   GÜVENLİ HTML
+========================================================= */
 
-    return score;
+function escapeHTML(value){
+
+    return String(value ?? "")
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
 }
+
+
+/* =========================================================
+   JSON VERİSİNİ NORMALLEŞTİR
+   Kullandığımız yapı:
+   
+   id
+   lig
+   ligAdi
+   evSahibi
+   evKisa
+   evLogo
+   deplasman
+   depKisa
+   depLogo
+   skor
+   durum
+   tarih
+   saat
+========================================================= */
+
+function normalizeMatch(match){
+
+    const score =
+        match.skor || {};
+
+    const status =
+        String(match.durum || "NS").toUpperCase();
+
+    return {
+
+        id: match.id,
+
+        date: match.tarih || "",
+
+        time: match.saat || "--:--",
+
+        league:
+            match.ligAdi ||
+            match.league ||
+            match.lig ||
+            "Diğer",
+
+        country:
+            match.ulke ||
+            match.country ||
+            "",
+
+        status: status,
+
+        minute:
+            match.dakika ||
+            match.minute ||
+            "",
+
+        home: {
+            name:
+                match.evSahibi ||
+                match.home?.name ||
+                "Ev Sahibi",
+
+            short:
+                match.evKisa ||
+                match.home?.short ||
+                "",
+
+            logo:
+                match.evLogo ||
+                match.home?.logo ||
+                ""
+        },
+
+        away: {
+            name:
+                match.deplasman ||
+                match.away?.name ||
+                "Deplasman",
+
+            short:
+                match.depKisa ||
+                match.away?.short ||
+                "",
+
+            logo:
+                match.depLogo ||
+                match.away?.logo ||
+                ""
+        },
+
+        score: {
+
+            home:
+                score.ev ??
+                score.home ??
+                match.homeScore ??
+                null,
+
+            away:
+                score.dep ??
+                score.away ??
+                match.awayScore ??
+                null
+
+        }
+
+    };
+}
+
+
+/* =========================================================
+   LOGO
+========================================================= */
 
 function teamHTML(team){
 
     const logo = team.logo
-        ? `<img src="${team.logo}" alt="">`
-        : team.short || "?";
+        ? `<img src="${escapeHTML(team.logo)}" alt="">`
+        : escapeHTML(team.short || "?");
 
     return `
         <div class="team">
-            <div class="team-logo">${logo}</div>
-            <span>${escapeHTML(team.name)}</span>
+
+            <div class="team-logo">
+                ${logo}
+            </div>
+
+            <span>
+                ${escapeHTML(team.name)}
+            </span>
+
         </div>
     `;
 }
 
+
+/* =========================================================
+   SKOR
+========================================================= */
+
+function formatScore(score){
+
+    if(
+        score === null ||
+        score === undefined ||
+        score === ""
+    ){
+        return "-";
+    }
+
+    return escapeHTML(score);
+}
+
+
+/* =========================================================
+   CANLI DURUM
+========================================================= */
+
+function isLiveStatus(status){
+
+    return [
+        "LIVE",
+        "1H",
+        "2H",
+        "HT",
+        "ET",
+        "UZ",
+        "CANLI"
+    ].includes(String(status).toUpperCase());
+
+}
+
+
+/* =========================================================
+   MAÇ HTML
+========================================================= */
+
 function matchHTML(match){
 
     const isLive =
-        match.status === "LIVE" ||
-        match.status === "1H" ||
-        match.status === "2H";
+        isLiveStatus(match.status);
 
     let statusText = "";
 
     if(match.status === "NS"){
         statusText = "Başlamadı";
     }
+
     else if(match.status === "MS"){
         statusText = "MS";
     }
-    else if(isLive){
-        statusText = match.minute
-            ? `${match.minute}'`
-            : "CANLI";
+
+    else if(match.status === "HT"){
+        statusText = "İY";
     }
+
+    else if(isLive){
+
+        statusText =
+            match.minute
+                ? `${escapeHTML(match.minute)}'`
+                : "CANLI";
+    }
+
     else{
-        statusText = match.status || "";
+
+        statusText =
+            match.status || "";
     }
 
     return `
-        <div class="match" onclick="openMatch(${match.id})">
+        <div
+            class="match"
+            onclick="openMatch(${Number(match.id)})"
+        >
 
             <div class="match-time ${isLive ? "live" : ""}">
-                ${match.time}
+                ${escapeHTML(match.time)}
             </div>
 
             <div class="teams">
+
                 ${teamHTML(match.home)}
+
                 ${teamHTML(match.away)}
+
             </div>
 
             <div class="score">
@@ -809,7 +1001,7 @@ function matchHTML(match){
                 </span>
 
                 <span class="status">
-                    ${statusText}
+                    ${escapeHTML(statusText)}
                 </span>
 
             </div>
@@ -818,25 +1010,44 @@ function matchHTML(match){
     `;
 }
 
+
+/* =========================================================
+   LİGLERE GÖRE GRUPLA
+========================================================= */
+
 function groupMatches(matches){
 
     const groups = {};
 
     matches.forEach(match => {
 
-        if(!groups[match.league]){
-            groups[match.league] = {
-                country: match.country || "",
+        const league =
+            match.league || "Diğer";
+
+        if(!groups[league]){
+
+            groups[league] = {
+
+                country:
+                    match.country || "",
+
                 matches: []
+
             };
+
         }
 
-        groups[match.league].matches.push(match);
+        groups[league].matches.push(match);
 
     });
 
     return groups;
 }
+
+
+/* =========================================================
+   MAÇLARI GÖSTER
+========================================================= */
 
 function renderMatches(matches){
 
@@ -847,82 +1058,117 @@ function renderMatches(matches){
 
         container.innerHTML = `
             <div class="league">
+
                 <div class="empty">
                     Bu tarihte maç bulunamadı.
                 </div>
+
             </div>
         `;
 
         return;
     }
 
-    const groups = groupMatches(matches);
+
+    const groups =
+        groupMatches(matches);
+
 
     let html = "";
 
-    Object.entries(groups).forEach(([league,data]) => {
 
-        html += `
-            <section class="league">
+    Object.entries(groups).forEach(
+        ([league,data]) => {
 
-                <div class="league-header">
+            html += `
 
-                    <div class="league-name">
-                        ⚽
-                        ${escapeHTML(league)}
+                <section class="league">
+
+                    <div class="league-header">
+
+                        <div class="league-name">
+                            ⚽
+                            ${escapeHTML(league)}
+                        </div>
+
+                        <span class="league-country">
+                            ${escapeHTML(data.country)}
+                        </span>
+
                     </div>
 
-                    <span class="league-country">
-                        ${escapeHTML(data.country)}
-                    </span>
+                    ${data.matches
+                        .map(matchHTML)
+                        .join("")}
 
-                </div>
+                </section>
 
-                ${data.matches.map(matchHTML).join("")}
+            `;
 
-            </section>
-        `;
+        }
+    );
 
-    });
 
     container.innerHTML = html;
 }
+
+
+/* =========================================================
+   CANLI MAÇLAR
+========================================================= */
 
 function renderLive(matches){
 
     const container =
         document.getElementById("liveMatches");
 
-    const live = matches.filter(match =>
-        ["LIVE","1H","2H"].includes(match.status)
-    );
+
+    const live =
+        matches.filter(match =>
+            isLiveStatus(match.status)
+        );
+
 
     if(!live.length){
 
         container.innerHTML = `
+
             <div class="empty">
                 Şu anda canlı maç bulunmuyor.
             </div>
+
         `;
 
         return;
     }
 
+
     container.innerHTML = live.map(match => `
 
-        <div class="popular"
-             onclick="openMatch(${match.id})"
-             style="cursor:pointer">
+        <div
+            class="popular"
+            onclick="openMatch(${Number(match.id)})"
+            style="cursor:pointer"
+        >
 
             <span>
+
                 ${escapeHTML(match.home.name)}
+
                 -
+
                 ${escapeHTML(match.away.name)}
+
             </span>
 
             <small>
-                ${match.score.home ?? 0} -
-                ${match.score.away ?? 0}
+
+                ${formatScore(match.score.home)}
+
+                -
+
+                ${formatScore(match.score.away)}
+
             </small>
 
         </div>
@@ -930,172 +1176,267 @@ function renderLive(matches){
     `).join("");
 }
 
-async function loadMatches(date = currentDate){
+
+/* =========================================================
+   MAÇLARI YÜKLE
+========================================================= */
+
+function loadMatches(date = currentDate){
 
     const container =
         document.getElementById("matches");
 
+
     container.innerHTML =
         `<div class="loading">Maçlar yükleniyor...</div>`;
 
-    try{
 
-        const response =
-            await fetch(`/api/matches?date=${date}`);
+    /*
+       GitHub Pages için doğrudan JSON dosyası.
+       /api/matches KULLANILMIYOR.
+    */
 
-        if(!response.ok){
-            throw new Error("API hatası");
-        }
+    const jsonPath =
+        "./maclar.json";
 
-        const data =
-            await response.json();
 
-        if(!data.success){
-            throw new Error("Veri alınamadı");
-        }
+    fetch(jsonPath + "?v=" + Date.now())
 
-        document.getElementById("todayText").textContent =
-            `${formatDate(date)} · ${data.count} maç`;
 
-        renderMatches(data.matches);
-        renderLive(data.matches);
+        .then(response => {
 
-    }
-    catch(error){
+            if(!response.ok){
 
-        container.innerHTML = `
-            <div class="error">
-                Maç verileri alınırken bir hata oluştu.
-            </div>
-        `;
+                throw new Error(
+                    "maclar.json bulunamadı"
+                );
 
-        console.error(error);
-    }
+            }
+
+            return response.json();
+
+        })
+
+
+        .then(data => {
+
+            /*
+               JSON ister direkt array olsun,
+               ister {matches:[...]} olsun desteklenir.
+            */
+
+            let rawMatches = [];
+
+            if(Array.isArray(data)){
+
+                rawMatches = data;
+
+            }
+
+            else if(Array.isArray(data.matches)){
+
+                rawMatches = data.matches;
+
+            }
+
+            else if(Array.isArray(data.data)){
+
+                rawMatches = data.data;
+
+            }
+
+
+            allMatches =
+                rawMatches.map(normalizeMatch);
+
+
+            const filtered =
+                allMatches.filter(match =>
+                    match.date === date
+                );
+
+
+            document
+                .getElementById("todayText")
+                .textContent =
+                    `${formatDate(date)} · ${filtered.length} maç`;
+
+
+            renderMatches(filtered);
+
+            renderLive(filtered);
+
+        })
+
+
+        .catch(error => {
+
+            container.innerHTML = `
+
+                <div class="error">
+
+                    Maç verileri alınırken bir hata oluştu.
+
+                    <br><br>
+
+                    <small>
+                        maclar.json dosyasının
+                        GitHub repository'sinde
+                        index.html ile aynı klasörde
+                        olduğundan emin olun.
+                    </small>
+
+                </div>
+
+            `;
+
+            console.error(error);
+
+        });
+
 }
+
+
+/* =========================================================
+   MAÇ DETAY
+========================================================= */
 
 function openMatch(id){
 
+    /*
+       Şimdilik detay sayfası yok.
+       Sonraki aşamada match.html?id=ID
+       sistemine çevireceğiz.
+    */
+
     alert(
-        "Maç detay sayfasını bir sonraki aşamada oluşturacağız.\n\nMaç ID: " + id
+        "Maç detay sayfası sonraki aşamada eklenecek.\n\nMaç ID: "
+        + id
     );
+
 }
 
-function escapeHTML(value){
 
-    return String(value ?? "")
-        .replaceAll("&","&amp;")
-        .replaceAll("<","&lt;")
-        .replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;")
-        .replaceAll("'","&#039;");
-}
+/* =========================================================
+   TARİH BUTONLARI
+========================================================= */
 
-/*
-|--------------------------------------------------------------------------
-| TARİH BUTONLARI
-|--------------------------------------------------------------------------
-*/
+document
+    .querySelectorAll(".date-btn")
+    .forEach(button => {
 
-document.querySelectorAll(".date-btn")
-.forEach(button => {
+        button.addEventListener(
+            "click",
+            () => {
 
-    button.addEventListener("click", () => {
+                document
+                    .querySelectorAll(".date-btn")
+                    .forEach(btn =>
+                        btn.classList.remove("active")
+                    );
 
-        document
-            .querySelectorAll(".date-btn")
-            .forEach(btn =>
-                btn.classList.remove("active")
-            );
 
-        button.classList.add("active");
+                button.classList.add("active");
 
-        const type =
-            button.dataset.date;
 
-        if(type === "today"){
-            currentDate = getLocalDate(0);
-        }
+                const type =
+                    button.dataset.date;
 
-        if(type === "prev"){
-            currentDate = getLocalDate(-1);
-        }
 
-        if(type === "next"){
-            currentDate = getLocalDate(1);
-        }
+                if(type === "today"){
 
-        loadMatches(currentDate);
+                    currentDate =
+                        getLocalDate(0);
+
+                }
+
+
+                if(type === "prev"){
+
+                    currentDate =
+                        getLocalDate(-1);
+
+                }
+
+
+                if(type === "next"){
+
+                    currentDate =
+                        getLocalDate(1);
+
+                }
+
+
+                loadMatches(currentDate);
+
+            }
+        );
 
     });
 
-});
 
-/*
-|--------------------------------------------------------------------------
-| ARAMA
-|--------------------------------------------------------------------------
-*/
+/* =========================================================
+   ARAMA
+========================================================= */
 
 document
-.getElementById("searchInput")
-.addEventListener("input", async event => {
+    .getElementById("searchInput")
+    .addEventListener(
+        "input",
+        event => {
 
-    const query =
-        event.target.value
-        .trim()
-        .toLowerCase();
+            const query =
+                event.target.value
+                    .trim()
+                    .toLowerCase();
 
-    if(!query){
 
-        loadMatches(currentDate);
-        return;
-    }
+            /*
+               Arama boşsa mevcut tarihteki
+               tüm maçları göster.
+            */
 
-    try{
+            let matches =
+                allMatches.filter(match =>
+                    match.date === currentDate
+                );
 
-        const response =
-            await fetch(`/api/matches?date=${currentDate}`);
 
-        const data =
-            await response.json();
+            if(query){
 
-        const filtered =
-            data.matches.filter(match =>
+                matches =
+                    matches.filter(match =>
 
-                match.home.name
-                    .toLowerCase()
-                    .includes(query)
+                        match.home.name
+                            .toLowerCase()
+                            .includes(query)
 
-                ||
+                        ||
 
-                match.away.name
-                    .toLowerCase()
-                    .includes(query)
+                        match.away.name
+                            .toLowerCase()
+                            .includes(query)
 
-                ||
+                        ||
 
-                match.league
-                    .toLowerCase()
-                    .includes(query)
+                        match.league
+                            .toLowerCase()
+                            .includes(query)
 
-            );
+                    );
 
-        renderMatches(filtered);
+            }
 
-    }
-    catch(error){
 
-        console.error(error);
+            renderMatches(matches);
 
-    }
+        }
+    );
 
-});
 
-/*
-|--------------------------------------------------------------------------
-| İLK YÜKLEME
-|--------------------------------------------------------------------------
-*/
+/* =========================================================
+   İLK YÜKLEME
+========================================================= */
 
 loadMatches();
 
