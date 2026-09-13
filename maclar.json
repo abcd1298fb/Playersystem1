@@ -1,0 +1,56 @@
+[
+    {
+        "id": 1,
+        "lig": "premier-league",
+        "ligAdi": "Premier League",
+        "evSahibi": "Arsenal",
+        "evKisa": "ARS",
+        "evLogo": "",
+        "deplasman": "Manchester United",
+        "depKisa": "MUN",
+        "depLogo": "",
+        "skor": {
+            "ev": null,
+            "dep": null
+        },
+        "durum": "NS",
+        "tarih": "2026-09-13",
+        "saat": "18:30"
+    },
+    {
+        "id": 2,
+        "lig": "super-lig",
+        "ligAdi": "Türkiye - Süper Lig",
+        "evSahibi": "Galatasaray",
+        "evKisa": "GS",
+        "evLogo": "",
+        "deplasman": "Fenerbahçe",
+        "depKisa": "FB",
+        "depLogo": "",
+        "skor": {
+            "ev": null,
+            "dep": null
+        },
+        "durum": "NS",
+        "tarih": "2026-09-13",
+        "saat": "20:00"
+    },
+    {
+        "id": 3,
+        "lig": "la-liga",
+        "ligAdi": "La Liga",
+        "evSahibi": "Barcelona",
+        "evKisa": "BAR",
+        "evLogo": "",
+        "deplasman": "Real Madrid",
+        "depKisa": "RMA",
+        "depLogo": "",
+        "skor": {
+            "ev": null,
+            "dep": null
+        },
+        "durum": "NS",
+        "tarih": "2026-09-13",
+        "saat": "22:00"
+    }
+]
