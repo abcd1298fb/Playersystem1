@@ -1,2783 +1,1103 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>plyr</title>
-
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body,
-        html {
-            width: 100%;
-            height: 100%;
-            background: #000;
-            color: #fff;
-            overflow: hidden;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            user-select: none;
-        }
-
-        .player-wrapper {
-            position: relative;
-            width: 100vw;
-            height: 100svh;
-            min-height: 100vh;
-            background: #000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-
-        video {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            display: block;
-            background: #000;
-        }
-
-        /* =========================
-           10 SANİYE BUTONLARI
-        ========================= */
-
-        .seek-overlay-btn {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            background: rgba(0, 0, 0, 0.6);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            color: #fff;
-            font-size: 16px;
-            font-weight: 700;
-            padding: 15px 20px;
-            border-radius: 50px;
-            cursor: pointer;
-            z-index: 20;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            opacity: 0.9;
-            transition:
-                background 0.2s,
-                transform 0.2s,
-                opacity 0.3s;
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
-        }
-
-        .player-wrapper.hide-controls .seek-overlay-btn {
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        .seek-overlay-btn:hover {
-            background: rgba(229, 9, 20, 0.8);
-            border-color: #E50914;
-            transform: translateY(-50%) scale(1.05);
-        }
-
-        .seek-left {
-            left: 8%;
-        }
-
-        .seek-right {
-            right: 8%;
-        }
-
-        /* =========================
-           ORTA OYNAT / DURDUR
-        ========================= */
-
-        .center-big-play-btn {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) scale(0.8);
-            width: 75px;
-            height: 75px;
-            background: rgba(0, 0, 0, 0.7);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            color: #fff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 22;
-            cursor: pointer;
-            opacity: 0;
-            pointer-events: none;
-            transition:
-                opacity 0.2s ease,
-                transform 0.2s ease;
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
-        }
-
-        .center-big-play-btn.show {
-            opacity: 1;
-            transform: translate(-50%, -50%) scale(1);
-        }
-
-        .center-big-play-btn svg {
-            width: 36px;
-            height: 36px;
-            fill: #fff;
-        }
-
-        /* =========================
-           YÜKLENME / HATA
-        ========================= */
-
-        .player-overlay {
-            position: absolute;
-            inset: 0;
-            background: rgba(20, 20, 20, 0.9);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            transition: opacity 0.4s ease;
-            opacity: 0;
-            pointer-events: none;
-            z-index: 25;
-        }
-
-        .player-overlay.active {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        .netflix-spinner {
-            width: 50px;
-            height: 50px;
-            border: 3px solid rgba(255, 255, 255, 0.2);
-            border-top-color: #E50914;
-            border-radius: 50%;
-            animation: spin 0.8s cubic-bezier(0.5, 0, 0.5, 1) infinite;
-        }
-
-        .overlay-text {
-            margin-top: 15px;
-            font-size: 15px;
-            color: #b3b3b3;
-            font-weight: 500;
-            text-align: center;
-            padding: 0 20px;
-        }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        /* =========================
-           KONTROLLER
-        ========================= */
-
-        .controls-container {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-
-            background:
-                linear-gradient(
-                    180deg,
-                    rgba(20, 20, 20, 0) 0%,
-                    rgba(20, 20, 20, 0.85) 40%,
-                    rgba(20, 20, 20, 0.98) 100%
-                );
-
-            padding:
-                20px
-                15px
-                calc(15px + env(safe-area-inset-bottom, 0px))
-                15px;
-
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-
-            transition:
-                opacity 0.3s ease,
-                transform 0.3s ease;
-
-            z-index: 30;
-            opacity: 1;
-            pointer-events: auto;
-            transform: translateY(0);
-        }
-
-        .player-wrapper.hide-controls .controls-container {
-            opacity: 0;
-            pointer-events: none;
-            transform: translateY(10px);
-        }
-
-        /* =========================
-           PROGRESS
-        ========================= */
-
-        .progress-container {
-            position: relative;
-            width: 100%;
-            height: 5px;
-            background: rgba(255, 255, 255, 0.25);
-            border-radius: 2px;
-            cursor: pointer;
-            transition: height 0.15s ease;
-        }
-
-        .progress-container:hover {
-            height: 8px;
-        }
-
-        .time-tooltip {
-            position: absolute;
-            bottom: 15px;
-            transform: translateX(-50%);
-            background: rgba(20, 20, 20, 0.9);
-            color: #fff;
-            padding: 4px 8px;
-            font-size: 11px;
-            border-radius: 4px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            pointer-events: none;
-            display: none;
-            white-space: nowrap;
-            z-index: 35;
-        }
-
-        .progress-container:hover .time-tooltip {
-            display: block;
-        }
-
-        .buffer-bar {
-            position: absolute;
-            top: 0;
-            left: 0;
-            height: 100%;
-            background: rgba(255, 255, 255, 0.4);
-            border-radius: 2px;
-            width: 0%;
-            pointer-events: none;
-        }
-
-        .progress-bar {
-            position: absolute;
-            top: 0;
-            left: 0;
-            height: 100%;
-            background: #E50914;
-            border-radius: 2px;
-            width: 0%;
-            pointer-events: none;
-        }
-
-        /* =========================
-           KONTROL SATIRI
-        ========================= */
-
-        .controls-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            width: 100%;
-        }
-
-        .controls-left,
-        .controls-right {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        button {
-            background: none;
-            border: none;
-            color: #fff;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition:
-                transform 0.15s,
-                color 0.15s;
-        }
-
-        button:hover {
-            color: #E50914;
-            transform: scale(1.1);
-        }
-
-        #playPauseBtn {
-            width: 28px;
-            height: 28px;
-            padding: 0;
-        }
-
-        #playPauseBtn svg {
-            width: 22px;
-            height: 22px;
-            fill: #fff;
-            transition: fill 0.15s;
-        }
-
-        #playPauseBtn:hover svg {
-            fill: #E50914;
-        }
-
-        .time-text {
-            font-size: 12px;
-            color: #e5e5e5;
-            font-variant-numeric: tabular-nums;
-            font-weight: 500;
-        }
-
-        .live-badge {
-            background: #E50914;
-            color: white;
-            font-size: 10px;
-            font-weight: 800;
-            padding: 2px 5px;
-            border-radius: 3px;
-            letter-spacing: 1px;
-        }
-
-        /* =========================
-           SES
-        ========================= */
-
-        .volume-wrapper {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .custom-svg-btn svg {
-            width: 20px;
-            height: 20px;
-            fill: #fff;
-            transition: fill 0.15s;
-        }
-
-        .custom-svg-btn:hover svg {
-            fill: #E50914;
-        }
-
-        input[type="range"] {
-            -webkit-appearance: none;
-            width: 60px;
-            height: 4px;
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 2px;
-            outline: none;
-            cursor: pointer;
-            accent-color: #E50914;
-        }
-
-        /* =========================
-           MENÜLER
-        ========================= */
-
-        .menu-container {
-            position: relative;
-        }
-
-        .dropdown-panel {
-            position: absolute;
-            bottom: 45px;
-            right: 0;
-            background: rgba(22, 22, 22, 0.96);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 8px;
-            padding: 10px;
-            display: none;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(6px);
-            -webkit-backdrop-filter: blur(6px);
-            z-index: 40;
-        }
-
-        .dropdown-panel.active {
-            display: flex;
-            gap: 15px;
-        }
-
-        .menu-column {
-            display: flex;
-            flex-direction: column;
-            min-width: 110px;
-        }
-
-        .dropdown-header {
-            font-size: 11px;
-            color: #999;
-            padding: 4px 8px;
-            font-weight: 700;
-            text-transform: uppercase;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            margin-bottom: 6px;
-        }
-
-        .menu-option {
-            background: none;
-            border: none;
-            color: #d2d2d2;
-            text-align: left;
-            padding: 6px 10px;
-            font-size: 12px;
-            width: 100%;
-            border-radius: 4px;
-            cursor: pointer;
-            transition:
-                background 0.1s,
-                color 0.1s;
-        }
-
-        .menu-option:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: #fff;
-            transform: none;
-        }
-
-        .menu-option.selected {
-            color: #E50914;
-            font-weight: 700;
-            background: rgba(229, 9, 20, 0.1);
-        }
-
-        .icon-btn {
-            font-size: 18px;
-        }
-
-        /* =========================
-           MOBİL
-        ========================= */
-
-        @media (max-width: 768px) {
-            .seek-overlay-btn {
-                padding: 10px 14px;
-                font-size: 13px;
-            }
-
-            .seek-left {
-                left: 4%;
-            }
-
-            .seek-right {
-                right: 4%;
-            }
-
-            .controls-left,
-            .controls-right {
-                gap: 9px;
-            }
-
-            .controls-container {
-                padding-left: 10px;
-                padding-right: 10px;
-            }
-
-            .center-big-play-btn {
-                width: 65px;
-                height: 65px;
-            }
-
-            .center-big-play-btn svg {
-                width: 30px;
-                height: 30px;
-            }
-        }
-
-        @media (max-width: 600px) {
-            .volume-wrapper input[type="range"] {
-                display: none;
-            }
-
-            .time-text {
-                font-size: 11px;
-            }
-
-            .live-badge {
-                font-size: 9px;
-            }
-
-            .dropdown-panel {
-                right: -5px;
-            }
-        }
-
-        /* Çok küçük ekran */
-        @media (max-width: 380px) {
-            .controls-left,
-            .controls-right {
-                gap: 6px;
-            }
-
-            .time-text {
-                font-size: 10px;
-            }
-
-            .seek-overlay-btn {
-                font-size: 11px;
-                padding: 8px 10px;
-            }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>FutbolLive — Canlı Skor</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+:root{
+    --bg:#05080d;
+    --panel:#0b1119;
+    --panel2:#101923;
+    --panel3:#141e2a;
+    --blue:#1688ff;
+    --blue2:#4bb2ff;
+    --green:#24d47b;
+    --red:#ff4d5e;
+    --yellow:#ffc83d;
+    --white:#f5f8fc;
+    --text:#d6dee8;
+    --muted:#718094;
+    --line:rgba(255,255,255,.07);
+    --radius:16px;
+}
+
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+}
+
+body{
+    min-height:100vh;
+    background:
+        radial-gradient(circle at 50% -20%,rgba(22,136,255,.16),transparent 35%),
+        var(--bg);
+    color:var(--text);
+    font-family:Manrope,Arial,sans-serif;
+}
+
+button,
+input{
+    font:inherit;
+}
+
+button{
+    border:0;
+    cursor:pointer;
+}
+
+.header{
+    height:68px;
+    position:sticky;
+    top:0;
+    z-index:100;
+    display:flex;
+    align-items:center;
+    border-bottom:1px solid var(--line);
+    background:rgba(5,8,13,.92);
+    backdrop-filter:blur(18px);
+}
+
+.header-inner{
+    width:min(1450px,calc(100% - 32px));
+    margin:auto;
+    display:flex;
+    align-items:center;
+    gap:28px;
+}
+
+.logo{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    color:var(--white);
+    text-decoration:none;
+    font-family:"Barlow Condensed",sans-serif;
+    font-size:31px;
+    font-weight:800;
+    letter-spacing:-.5px;
+}
+
+.logo-ball{
+    width:31px;
+    height:31px;
+    border-radius:50%;
+    display:grid;
+    place-items:center;
+    background:linear-gradient(145deg,var(--blue2),var(--blue));
+    color:#fff;
+    font-size:16px;
+    box-shadow:0 0 25px rgba(22,136,255,.35);
+}
+
+.nav{
+    display:flex;
+    align-items:center;
+    gap:6px;
+}
+
+.nav button{
+    background:transparent;
+    color:var(--muted);
+    padding:9px 12px;
+    border-radius:9px;
+    font-weight:700;
+    font-size:13px;
+}
+
+.nav button.active,
+.nav button:hover{
+    background:rgba(255,255,255,.06);
+    color:var(--white);
+}
+
+.search{
+    margin-left:auto;
+    position:relative;
+    width:270px;
+}
+
+.search input{
+    width:100%;
+    height:40px;
+    border:1px solid var(--line);
+    border-radius:11px;
+    outline:none;
+    background:var(--panel);
+    color:var(--white);
+    padding:0 14px 0 40px;
+}
+
+.search input:focus{
+    border-color:rgba(22,136,255,.55);
+}
+
+.search span{
+    position:absolute;
+    left:13px;
+    top:10px;
+    color:var(--muted);
+}
+
+.layout{
+    width:min(1450px,calc(100% - 32px));
+    margin:26px auto 60px;
+    display:grid;
+    grid-template-columns:230px minmax(0,1fr) 270px;
+    gap:20px;
+}
+
+.sidebar,
+.rightbar{
+    min-width:0;
+}
+
+.side-box{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    overflow:hidden;
+    margin-bottom:15px;
+}
+
+.side-title{
+    padding:15px 16px;
+    border-bottom:1px solid var(--line);
+    color:var(--white);
+    font-weight:800;
+    font-size:14px;
+}
+
+.side-item{
+    width:100%;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:12px 15px;
+    background:transparent;
+    color:var(--muted);
+    text-align:left;
+    font-size:13px;
+    font-weight:600;
+}
+
+.side-item:hover,
+.side-item.active{
+    background:rgba(22,136,255,.08);
+    color:var(--white);
+}
+
+.side-icon{
+    width:28px;
+    height:28px;
+    border-radius:8px;
+    display:grid;
+    place-items:center;
+    background:var(--panel3);
+}
+
+.main{
+    min-width:0;
+}
+
+.hero{
+    background:
+        linear-gradient(135deg,rgba(22,136,255,.15),transparent 55%),
+        var(--panel);
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:24px;
+    margin-bottom:20px;
+}
+
+.hero-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:15px;
+}
+
+.hero h1{
+    color:var(--white);
+    font-family:"Barlow Condensed",sans-serif;
+    font-size:36px;
+    text-transform:uppercase;
+    letter-spacing:.2px;
+}
+
+.hero p{
+    color:var(--muted);
+    margin-top:3px;
+    font-size:13px;
+}
+
+.live-pill{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    padding:7px 11px;
+    border-radius:99px;
+    background:rgba(36,212,123,.09);
+    color:var(--green);
+    font-size:11px;
+    font-weight:800;
+}
+
+.live-dot{
+    width:7px;
+    height:7px;
+    border-radius:50%;
+    background:var(--green);
+    box-shadow:0 0 12px var(--green);
+}
+
+.date-bar{
+    display:flex;
+    gap:8px;
+    overflow-x:auto;
+    padding-bottom:4px;
+    margin-bottom:20px;
+    scrollbar-width:none;
+}
+
+.date-bar::-webkit-scrollbar{
+    display:none;
+}
+
+.date-btn{
+    flex:0 0 auto;
+    min-width:90px;
+    padding:11px 14px;
+    border:1px solid var(--line);
+    border-radius:11px;
+    background:var(--panel);
+    color:var(--muted);
+    font-size:12px;
+    font-weight:800;
+}
+
+.date-btn.active{
+    color:#fff;
+    background:var(--blue);
+    border-color:var(--blue);
+    box-shadow:0 8px 25px rgba(22,136,255,.22);
+}
+
+.league{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    overflow:hidden;
+    margin-bottom:15px;
+}
+
+.league-header{
+    height:48px;
+    padding:0 16px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    border-bottom:1px solid var(--line);
+    background:rgba(255,255,255,.015);
+}
+
+.league-name{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    color:var(--white);
+    font-size:13px;
+    font-weight:800;
+}
+
+.league-country{
+    color:var(--muted);
+    font-size:11px;
+}
+
+.match{
+    min-height:78px;
+    display:grid;
+    grid-template-columns:65px minmax(0,1fr) 75px;
+    align-items:center;
+    padding:9px 15px;
+    border-bottom:1px solid var(--line);
+    cursor:pointer;
+    transition:.18s;
+}
+
+.match:last-child{
+    border-bottom:0;
+}
+
+.match:hover{
+    background:rgba(255,255,255,.025);
+}
+
+.match-time{
+    color:var(--muted);
+    font-size:11px;
+    font-weight:800;
+}
+
+.match-time.live{
+    color:var(--green);
+}
+
+.teams{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+}
+
+.team{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    color:var(--text);
+    font-size:13px;
+    font-weight:700;
+}
+
+.team-logo{
+    width:25px;
+    height:25px;
+    display:grid;
+    place-items:center;
+    border-radius:7px;
+    background:var(--panel3);
+    color:var(--muted);
+    font-size:9px;
+    font-weight:900;
+    overflow:hidden;
+}
+
+.team-logo img{
+    width:100%;
+    height:100%;
+    object-fit:contain;
+}
+
+.score{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:6px;
+    color:var(--white);
+    font-weight:900;
+    font-size:14px;
+}
+
+.score-live{
+    color:var(--green);
+}
+
+.status{
+    font-size:9px;
+    color:var(--muted);
+    font-weight:800;
+}
+
+.right-card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    overflow:hidden;
+    margin-bottom:15px;
+}
+
+.right-title{
+    padding:15px;
+    border-bottom:1px solid var(--line);
+    color:var(--white);
+    font-size:14px;
+    font-weight:800;
+}
+
+.popular{
+    padding:13px 15px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    border-bottom:1px solid var(--line);
+}
+
+.popular:last-child{
+    border-bottom:0;
+}
+
+.popular span{
+    color:var(--text);
+    font-size:12px;
+    font-weight:700;
+}
+
+.popular small{
+    color:var(--muted);
+    font-size:10px;
+}
+
+.empty{
+    padding:40px 20px;
+    text-align:center;
+    color:var(--muted);
+    font-size:13px;
+}
+
+.loading{
+    padding:50px;
+    text-align:center;
+    color:var(--muted);
+}
+
+.error{
+    padding:25px;
+    border-radius:13px;
+    background:rgba(255,77,94,.08);
+    border:1px solid rgba(255,77,94,.15);
+    color:#ff8792;
+    font-size:13px;
+}
+
+@media(max-width:1050px){
+    .layout{
+        grid-template-columns:190px minmax(0,1fr);
+    }
+
+    .rightbar{
+        display:none;
+    }
+}
+
+@media(max-width:760px){
+    .header{
+        height:auto;
+        padding:10px 0;
+    }
+
+    .header-inner{
+        flex-wrap:wrap;
+        gap:10px;
+    }
+
+    .logo{
+        font-size:27px;
+    }
+
+    .nav{
+        order:3;
+        width:100%;
+        overflow-x:auto;
+        scrollbar-width:none;
+    }
+
+    .nav::-webkit-scrollbar{
+        display:none;
+    }
+
+    .search{
+        width:170px;
+    }
+
+    .layout{
+        width:calc(100% - 20px);
+        margin-top:15px;
+        display:block;
+    }
+
+    .sidebar{
+        display:none;
+    }
+
+    .hero{
+        padding:18px;
+    }
+
+    .hero h1{
+        font-size:30px;
+    }
+
+    .match{
+        grid-template-columns:55px minmax(0,1fr) 55px;
+        padding:9px 11px;
+    }
+}
+
+@media(max-width:430px){
+    .search{
+        flex:1;
+        width:auto;
+    }
+
+    .header-inner{
+        width:calc(100% - 20px);
+    }
+
+    .match{
+        min-height:74px;
+    }
+
+    .team{
+        font-size:12px;
+    }
+}
+</style>
 </head>
 
 <body>
 
-<div class="player-wrapper" id="playerWrapper">
+<header class="header">
+    <div class="header-inner">
 
-    <!-- GERİ -->
-    <button
-        class="seek-overlay-btn seek-left"
-        id="overlayRewind"
-        title="10 Saniye Geri">
-        ◀ -10s
-    </button>
+        <a class="logo" href="#">
+            <span class="logo-ball">⚽</span>
+            FUTBOLLIVE
+        </a>
 
-    <!-- İLERİ -->
-    <button
-        class="seek-overlay-btn seek-right"
-        id="overlayForward"
-        title="10 Saniye İleri">
-        +10s ▶
-    </button>
+        <nav class="nav">
+            <button class="active">Maçlar</button>
+            <button>Canlı</button>
+            <button>Ligler</button>
+            <button>Takımlar</button>
+        </nav>
 
-    <!-- ORTA OYNAT -->
-    <div
-        class="center-big-play-btn"
-        id="centerBigPlayBtn">
-
-        <svg
-            id="centerPlayIconSvg"
-            viewBox="0 0 24 24">
-
-            <path d="M8 5v14l11-7z"/>
-
-        </svg>
-    </div>
-
-    <!-- YÜKLENME -->
-    <div
-        class="player-overlay active"
-        id="playerOverlay">
-
-        <div
-            class="netflix-spinner"
-            id="netflixSpinner">
-        </div>
-
-        <div
-            class="overlay-text"
-            id="overlayText">
-            Yayın Yükleniyor...
+        <div class="search">
+            <span>⌕</span>
+            <input id="searchInput" type="text" placeholder="Takım veya maç ara...">
         </div>
 
     </div>
+</header>
 
-    <!-- VIDEO -->
-    <video
-        id="videoElement"
-        playsinline
-        preload="auto">
-    </video>
+<div class="layout">
 
-    <!-- KONTROLLER -->
-    <div
-        class="controls-container"
-        id="controlsContainer">
+    <aside class="sidebar">
 
-        <!-- PROGRESS -->
-        <div
-            class="progress-container"
-            id="progressContainer">
+        <div class="side-box">
+            <div class="side-title">Maçlar</div>
 
-            <div
-                class="time-tooltip"
-                id="timeTooltip">
-                00:00
+            <button class="side-item active">
+                <span class="side-icon">⚽</span>
+                Tüm Maçlar
+            </button>
+
+            <button class="side-item">
+                <span class="side-icon">🔴</span>
+                Canlı
+            </button>
+
+            <button class="side-item">
+                <span class="side-icon">◷</span>
+                Yaklaşan
+            </button>
+
+            <button class="side-item">
+                <span class="side-icon">✓</span>
+                Sonuçlanan
+            </button>
+        </div>
+
+        <div class="side-box">
+            <div class="side-title">Popüler Ligler</div>
+
+            <button class="side-item">
+                <span class="side-icon">🏴</span>
+                Premier League
+            </button>
+
+            <button class="side-item">
+                <span class="side-icon">🇹🇷</span>
+                Süper Lig
+            </button>
+
+            <button class="side-item">
+                <span class="side-icon">🇪🇸</span>
+                La Liga
+            </button>
+
+            <button class="side-item">
+                <span class="side-icon">🇮🇹</span>
+                Serie A
+            </button>
+
+            <button class="side-item">
+                <span class="side-icon">🇩🇪</span>
+                Bundesliga
+            </button>
+        </div>
+
+    </aside>
+
+    <main class="main">
+
+        <section class="hero">
+            <div class="hero-top">
+
+                <div>
+                    <h1>Bugünün Maçları</h1>
+                    <p id="todayText">Maçlar yükleniyor...</p>
+                </div>
+
+                <div class="live-pill">
+                    <span class="live-dot"></span>
+                    CANLI SKOR
+                </div>
+
+            </div>
+        </section>
+
+        <div class="date-bar">
+            <button class="date-btn" data-date="prev">Dün</button>
+            <button class="date-btn active" data-date="today">Bugün</button>
+            <button class="date-btn" data-date="next">Yarın</button>
+        </div>
+
+        <div id="matches">
+            <div class="loading">Maçlar yükleniyor...</div>
+        </div>
+
+    </main>
+
+    <aside class="rightbar">
+
+        <div class="right-card">
+
+            <div class="right-title">
+                🔴 Canlı Maçlar
             </div>
 
-            <div
-                class="buffer-bar"
-                id="bufferBar">
-            </div>
-
-            <div
-                class="progress-bar"
-                id="progressBar">
+            <div id="liveMatches">
+                <div class="empty">
+                    Şu anda canlı maç bulunmuyor.
+                </div>
             </div>
 
         </div>
 
-        <!-- KONTROL SATIRI -->
-        <div class="controls-row">
+        <div class="right-card">
 
-            <!-- SOL -->
-            <div class="controls-left">
-
-                <!-- PLAY -->
-                <button
-                    id="playPauseBtn"
-                    class="custom-svg-btn"
-                    title="Oynat/Duraklat (Space / K)">
-
-                    <svg
-                        id="playPauseIconSvg"
-                        viewBox="0 0 24 24">
-
-                        <path d="M8 5v14l11-7z"/>
-
-                    </svg>
-
-                </button>
-
-                <!-- SES -->
-                <div class="volume-wrapper">
-
-                    <button
-                        id="muteBtn"
-                        class="custom-svg-btn"
-                        title="Sesi Aç/Kapat (M)">
-
-                        <svg
-                            id="volumeIconSvg"
-                            viewBox="0 0 24 24">
-
-                            <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77-2.99-7.86-7-8.77z"/>
-
-                        </svg>
-
-                    </button>
-
-                    <input
-                        type="range"
-                        id="volumeSlider"
-                        min="0"
-                        max="1"
-                        step="0.05"
-                        value="1">
-
-                </div>
-
-                <!-- SÜRE -->
-                <div
-                    class="time-text"
-                    id="timeDisplay">
-                    00:00:00
-                </div>
-
-                <!-- CANLI -->
-                <div
-                    class="live-badge"
-                    id="liveBadge">
-                    CANLI
-                </div>
-
+            <div class="right-title">
+                🏆 Popüler Ligler
             </div>
 
-            <!-- SAĞ -->
-            <div class="controls-right">
+            <div class="popular">
+                <span>Premier League</span>
+                <small>İngiltere</small>
+            </div>
 
-                <!-- ALTYAZI -->
-                <div class="menu-container">
+            <div class="popular">
+                <span>Süper Lig</span>
+                <small>Türkiye</small>
+            </div>
 
-                    <button
-                        id="subtitlesBtn"
-                        class="custom-svg-btn"
-                        title="Altyazılar">
+            <div class="popular">
+                <span>La Liga</span>
+                <small>İspanya</small>
+            </div>
 
-                        <svg viewBox="0 0 24 24">
-
-                            <path d="M19 4H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-8 7H7v1h4v2H7v1h4v1H6V9h5v2zm7 5h-5v-1h4v-1h-3v-1h3v-1h-4V9h5v7z"/>
-
-                        </svg>
-
-                    </button>
-
-                    <div
-                        class="dropdown-panel"
-                        id="subtitlesDropdown"
-                        style="display:none; flex-direction:column;">
-
-                        <div class="dropdown-header">
-                            Altyazı
-                        </div>
-
-                        <div
-                            id="subtitlesListContainer"
-                            style="display:flex; flex-direction:column;">
-                        </div>
-
-                    </div>
-
-                </div>
-
-                <!-- AYARLAR -->
-                <div class="menu-container">
-
-                    <button
-                        id="settingsBtn"
-                        class="icon-btn"
-                        title="Ayarlar">
-                        ⚙️
-                    </button>
-
-                    <div
-                        class="dropdown-panel"
-                        id="settingsDropdown">
-
-                        <!-- KALİTE -->
-                        <div class="menu-column">
-
-                            <div class="dropdown-header">
-                                Kalite
-                            </div>
-
-                            <div
-                                id="qualityListContainer">
-                            </div>
-
-                        </div>
-
-                        <!-- HIZ -->
-                        <div class="menu-column">
-
-                            <div class="dropdown-header">
-                                Hız
-                            </div>
-
-                            <div id="speedListContainer">
-
-                                <button
-                                    class="menu-option"
-                                    onclick="setSpeed(0.5)">
-                                    0.5x
-                                </button>
-
-                                <button
-                                    class="menu-option selected"
-                                    onclick="setSpeed(1)">
-                                    Normal (1x)
-                                </button>
-
-                                <button
-                                    class="menu-option"
-                                    onclick="setSpeed(1.25)">
-                                    1.25x
-                                </button>
-
-                                <button
-                                    class="menu-option"
-                                    onclick="setSpeed(2)">
-                                    2.0x
-                                </button>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-                <!-- PIP -->
-                <button
-                    id="pipBtn"
-                    class="custom-svg-btn"
-                    title="Resim İçinde Resim">
-
-                    <svg viewBox="0 0 24 24">
-
-                        <path d="M19 7h-8v6h8V7zm2-4H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16.01H3V4.99h18v14.02z"/>
-
-                    </svg>
-
-                </button>
-
-                <!-- FULLSCREEN -->
-                <button
-                    id="fullscreenBtn"
-                    class="icon-btn"
-                    title="Tam Ekran (F)">
-                    ⛶
-                </button>
-
+            <div class="popular">
+                <span>Serie A</span>
+                <small>İtalya</small>
             </div>
 
         </div>
 
-    </div>
+    </aside>
 
 </div>
 
-
 <script>
 
-    /* =========================================================
-       ELEMENTLER
-    ========================================================= */
+let currentDate = getLocalDate();
 
-    const video =
-        document.getElementById('videoElement');
+function getLocalDate(offset = 0){
 
-    const playerWrapper =
-        document.getElementById('playerWrapper');
+    const date = new Date();
 
-    const playerOverlay =
-        document.getElementById('playerOverlay');
+    date.setDate(date.getDate() + offset);
 
-    const overlayText =
-        document.getElementById('overlayText');
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2,"0");
+    const day = String(date.getDate()).padStart(2,"0");
 
-    const netflixSpinner =
-        document.getElementById('netflixSpinner');
+    return `${year}-${month}-${day}`;
+}
 
-    const playPauseBtn =
-        document.getElementById('playPauseBtn');
+function formatDate(date){
 
-    const playPauseIconSvg =
-        document.getElementById('playPauseIconSvg');
+    const parts = date.split("-");
 
-    const muteBtn =
-        document.getElementById('muteBtn');
+    return `${parts[2]}.${parts[1]}.${parts[0]}`;
+}
 
-    const volumeIconSvg =
-        document.getElementById('volumeIconSvg');
+function formatScore(score){
 
-    const volumeSlider =
-        document.getElementById('volumeSlider');
+    if(
+        score === null ||
+        score === undefined
+    ){
+        return "-";
+    }
 
-    const timeDisplay =
-        document.getElementById('timeDisplay');
+    return score;
+}
 
-    const liveBadge =
-        document.getElementById('liveBadge');
+function teamHTML(team){
 
-    const progressContainer =
-        document.getElementById('progressContainer');
+    const logo = team.logo
+        ? `<img src="${team.logo}" alt="">`
+        : team.short || "?";
 
-    const progressBar =
-        document.getElementById('progressBar');
+    return `
+        <div class="team">
+            <div class="team-logo">${logo}</div>
+            <span>${escapeHTML(team.name)}</span>
+        </div>
+    `;
+}
 
-    const bufferBar =
-        document.getElementById('bufferBar');
+function matchHTML(match){
 
-    const timeTooltip =
-        document.getElementById('timeTooltip');
+    const isLive =
+        match.status === "LIVE" ||
+        match.status === "1H" ||
+        match.status === "2H";
 
-    const settingsBtn =
-        document.getElementById('settingsBtn');
+    let statusText = "";
 
-    const settingsDropdown =
-        document.getElementById('settingsDropdown');
+    if(match.status === "NS"){
+        statusText = "Başlamadı";
+    }
+    else if(match.status === "MS"){
+        statusText = "MS";
+    }
+    else if(isLive){
+        statusText = match.minute
+            ? `${match.minute}'`
+            : "CANLI";
+    }
+    else{
+        statusText = match.status || "";
+    }
 
-    const qualityListContainer =
-        document.getElementById('qualityListContainer');
+    return `
+        <div class="match" onclick="openMatch(${match.id})">
 
-    const subtitlesBtn =
-        document.getElementById('subtitlesBtn');
+            <div class="match-time ${isLive ? "live" : ""}">
+                ${match.time}
+            </div>
 
-    const subtitlesDropdown =
-        document.getElementById('subtitlesDropdown');
+            <div class="teams">
+                ${teamHTML(match.home)}
+                ${teamHTML(match.away)}
+            </div>
 
-    const subtitlesListContainer =
-        document.getElementById('subtitlesListContainer');
+            <div class="score">
 
-    const pipBtn =
-        document.getElementById('pipBtn');
+                <span class="${isLive ? "score-live" : ""}">
+                    ${formatScore(match.score.home)}
+                </span>
 
-    const fullscreenBtn =
-        document.getElementById('fullscreenBtn');
+                <span class="${isLive ? "score-live" : ""}">
+                    ${formatScore(match.score.away)}
+                </span>
 
-    const overlayRewind =
-        document.getElementById('overlayRewind');
+                <span class="status">
+                    ${statusText}
+                </span>
 
-    const overlayForward =
-        document.getElementById('overlayForward');
+            </div>
 
-    const centerBigPlayBtn =
-        document.getElementById('centerBigPlayBtn');
+        </div>
+    `;
+}
 
-    const centerPlayIconSvg =
-        document.getElementById('centerPlayIconSvg');
+function groupMatches(matches){
 
+    const groups = {};
 
-    /* =========================================================
-       KANALLAR
-    ========================================================= */
+    matches.forEach(match => {
 
-    const channelMap = {
-
-        "beinsports1b":
-            "https://corestream.ardastream.live//hls/bein1.m3u8",
-        "beinsports1c":
-            "https://andro.evrenesoglu99.click/checklist/androstreamlivekral.m3u8",
-
-        "beinsports2":
-            "https://corestream.ardastream.live//bein2/tracks-v1a1/mono.m3u8",
-
-        "beinsports3":
-            "https://corestream.ardastream.live//bein3/tracks-v1a1/mono.m3u8",
-
-        "beinsports4":
-            "https://corestream.ardastream.live//bein4/tracks-v1a1/mono.m3u8",
-
-        "beinsports4b":
-            "https://andro.evrenesoglu57.click/checklist/androstreamlivebs4.m3u8",
-
-        "beinsports5":
-            "https://corestream.ardastream.live//bein5/tracks-v1a1/mono.m3u8",
-
-        "beinsports5b":
-            "https://andro.evrenesoglu57.click/checklist/androstreamlivebs5.m3u8",
-
-        "beinmax1b":
-            "https://andro.evrenesoglu57.click/checklist/androstreamlivebsm1.m3u8",
-
-        "beinmax2b":
-            "https://andro.evrenesoglu57.click/checklist/androstreamlivebsm2.m3u8",
-
-        "ssport1b":
-            "https://andro.evrenesoglu57.click/checklist/androstreamlivess1.m3u8",
-
-        "ssport2b":
-            "https://andro.evrenesoglu57.click/checklist/androstreamlivess2.m3u8",
-
-        "tivibu1b":
-            "https://andro.evrenesoglu57.click/checklist/androstreamlivets1.m3u8",
-
-        "tivibu2b":
-            "https://andro.evrenesoglu57.click/checklist/androstreamlivets2.m3u8",
-
-        "tivibu3b":
-            "https://andro.evrenesoglu57.click/checklist/androstreamlivets3.m3u8",
-
-        "tivibu4b":
-            "https://andro.evrenesoglu57.click/checklist/androstreamlivets4.m3u8",
-
-        "smartsporb":
-            "https://andro.evrenesoglu57.click/checklist/androstreamlivesm1.m3u8",
-
-        "smartspor2b":
-            "https://andro.evrenesoglu57.click/checklist/androstreamlivesm2.m3u8",
-
-        "tabiispor":
-            "https://kL9mR2vXw7nQ5pY1sH4tJ3gB6.medya.trt.com.tr/master.m3u8",
-
-        "tabiispor1":
-            "https://Pz4qT7nW1mR9sH2vL5xK8jG3y.medya.trt.com.tr/master.m3u8",
-
-        "tabiispor2":
-            "https://mR8bV4kL1nQ7sH9tW2xP5zJ6g.medya.trt.com.tr/master.m3u8",
-
-        "tabiispor3":
-            "https://mR4vL7nQ2sH9tW5pP1zK3gJ8b.medya.trt.com.tr/master.m3u8",
-
-        "tabiispor4":
-            "https://sH7tQ2nW5mR1vL9xP4zK3gJ8k.medya.trt.com.tr/master.m3u8",
-
-        "tabiispor5":
-            "https://vL2nQ8sH4tW1mR7xP5zK9gJ3y.medya.trt.com.tr/master.m3u8",
-
-        "tabiispor6":
-            "https://nW5mR1vL9xP4zK2sH7tQ3gJ6b.medya.trt.com.tr/master.m3u8",
-
-        "tabiispor7":
-            "https://Pz2rT7nW1mR9sH4vL6xK3gJ5b.medya.trt.com.tr/master.m3u8",
-
-        "tabiispor8":
-            "https://vL9nQ2sH5tW1mR7xP4zK8gJ3k.medya.trt.com.tr/master.m3u8",
-
-        "trtspor":
-            "https://tv-trtspor1.medya.trt.com.tr/master.m3u8",
-
-        "trt1":
-            "https://tv-trt1.medya.trt.com.tr/master.m3u8"
-    };
-
-
-    /* =========================================================
-       URL KANAL
-    ========================================================= */
-
-    const urlParams =
-        new URLSearchParams(window.location.search);
-
-    const kanalKey =
-        urlParams.get('kanal');
-
-    const streamUrl =
-        kanalKey
-            ? channelMap[kanalKey.toLowerCase()]
-            : null;
-
-
-    /* =========================================================
-       DEĞİŞKENLER
-    ========================================================= */
-
-    let hls = null;
-
-    let hideTimeout = null;
-
-    let centerAnimTimeout = null;
-
-    let isDragging = false;
-
-
-    /* =========================================================
-       PLAYER BAŞLAT
-    ========================================================= */
-
-    function initPlayer() {
-
-        if (!streamUrl) {
-
-            netflixSpinner.style.display = 'none';
-
-            overlayText.textContent =
-                "Kanal Bulunamadı veya Geçersiz Parametre!";
-
-            return;
+        if(!groups[match.league]){
+            groups[match.league] = {
+                country: match.country || "",
+                matches: []
+            };
         }
 
-        video.volume = 1.0;
+        groups[match.league].matches.push(match);
 
-        volumeSlider.value = 1.0;
+    });
 
-        updateVolumeIcon();
+    return groups;
+}
 
+function renderMatches(matches){
 
-        /* HLS.JS */
+    const container =
+        document.getElementById("matches");
 
-        if (Hls.isSupported()) {
+    if(!matches.length){
 
-            hls = new Hls({
+        container.innerHTML = `
+            <div class="league">
+                <div class="empty">
+                    Bu tarihte maç bulunamadı.
+                </div>
+            </div>
+        `;
 
-                maxBufferLength: 30,
+        return;
+    }
 
-                liveSyncDurationCount: 3,
+    const groups = groupMatches(matches);
 
-                enableWorker: true
+    let html = "";
 
-            });
+    Object.entries(groups).forEach(([league,data]) => {
 
+        html += `
+            <section class="league">
 
-            hls.loadSource(streamUrl);
+                <div class="league-header">
 
-            hls.attachMedia(video);
+                    <div class="league-name">
+                        ⚽
+                        ${escapeHTML(league)}
+                    </div>
 
+                    <span class="league-country">
+                        ${escapeHTML(data.country)}
+                    </span>
 
-            hls.on(
-                Hls.Events.MANIFEST_PARSED,
-                (event, data) => {
+                </div>
 
-                    hideOverlay();
+                ${data.matches.map(matchHTML).join("")}
 
-                    buildQualityMenu(data.levels);
+            </section>
+        `;
 
-                    buildSubtitleMenu();
+    });
 
-                    resetHideTimer();
-                }
-            );
+    container.innerHTML = html;
+}
 
+function renderLive(matches){
 
-            hls.on(
-                Hls.Events.ERROR,
-                (event, data) => {
+    const container =
+        document.getElementById("liveMatches");
 
-                    console.warn(
-                        "HLS:",
-                        data
-                    );
+    const live = matches.filter(match =>
+        ["LIVE","1H","2H"].includes(match.status)
+    );
 
-                    if (!data.fatal) {
-                        return;
-                    }
+    if(!live.length){
 
+        container.innerHTML = `
+            <div class="empty">
+                Şu anda canlı maç bulunmuyor.
+            </div>
+        `;
 
-                    if (
-                        data.type ===
-                        Hls.ErrorTypes.NETWORK_ERROR
-                    ) {
+        return;
+    }
 
-                        overlayText.textContent =
-                            "Yayın bağlantısı yenileniyor...";
+    container.innerHTML = live.map(match => `
 
-                        playerOverlay.classList.add(
-                            'active'
-                        );
+        <div class="popular"
+             onclick="openMatch(${match.id})"
+             style="cursor:pointer">
 
-                        hls.startLoad();
+            <span>
+                ${escapeHTML(match.home.name)}
+                -
+                ${escapeHTML(match.away.name)}
+            </span>
 
-                    }
+            <small>
+                ${match.score.home ?? 0} -
+                ${match.score.away ?? 0}
+            </small>
 
-                    else if (
-                        data.type ===
-                        Hls.ErrorTypes.MEDIA_ERROR
-                    ) {
+        </div>
 
-                        hls.recoverMediaError();
+    `).join("");
+}
 
-                    }
+async function loadMatches(date = currentDate){
 
-                    else {
+    const container =
+        document.getElementById("matches");
 
-                        showPlayerError(
-                            "Yayın yüklenemedi."
-                        );
+    container.innerHTML =
+        `<div class="loading">Maçlar yükleniyor...</div>`;
 
-                    }
+    try{
 
-                }
-            );
+        const response =
+            await fetch(`/api/matches?date=${date}`);
 
+        if(!response.ok){
+            throw new Error("API hatası");
         }
 
-        /* SAFARI / NATIVE HLS */
+        const data =
+            await response.json();
 
-        else if (
-            video.canPlayType(
-                'application/vnd.apple.mpegurl'
-            )
-        ) {
-
-            video.src = streamUrl;
-
-            video.addEventListener(
-                'loadedmetadata',
-                () => {
-
-                    hideOverlay();
-
-                    buildSubtitleMenu();
-
-                },
-                {
-                    once: true
-                }
-            );
-
-            video.addEventListener(
-                'error',
-                () => {
-
-                    showPlayerError(
-                        "Yayın yüklenemedi."
-                    );
-
-                }
-            );
-
+        if(!data.success){
+            throw new Error("Veri alınamadı");
         }
 
-        else {
+        document.getElementById("todayText").textContent =
+            `${formatDate(date)} · ${data.count} maç`;
 
-            showPlayerError(
-                "Bu tarayıcı HLS yayınlarını desteklemiyor."
-            );
-
-        }
-
-
-        resetHideTimer();
-    }
-
-
-    /* =========================================================
-       HATA
-    ========================================================= */
-
-    function showPlayerError(message) {
-
-        netflixSpinner.style.display =
-            'none';
-
-        overlayText.textContent =
-            message;
-
-        playerOverlay.classList.add(
-            'active'
-        );
-    }
-
-
-    /* =========================================================
-       OVERLAY
-    ========================================================= */
-
-    function hideOverlay() {
-
-        playerOverlay.classList.remove(
-            'active'
-        );
+        renderMatches(data.matches);
+        renderLive(data.matches);
 
     }
+    catch(error){
 
+        container.innerHTML = `
+            <div class="error">
+                Maç verileri alınırken bir hata oluştu.
+            </div>
+        `;
 
-    /* =========================================================
-       KALİTE
-    ========================================================= */
-
-    function buildQualityMenu(levels) {
-
-        qualityListContainer.innerHTML = '';
-
-
-        const autoBtn =
-            document.createElement('button');
-
-        autoBtn.className =
-            'menu-option selected';
-
-        autoBtn.textContent =
-            'Otomatik';
-
-
-        autoBtn.onclick = () => {
-
-            if (hls) {
-
-                hls.currentLevel = -1;
-
-            }
-
-            updateSelectedUI(
-                autoBtn,
-                qualityListContainer
-            );
-
-        };
-
-
-        qualityListContainer.appendChild(
-            autoBtn
-        );
-
-
-        levels.forEach(
-            (level, index) => {
-
-                const btn =
-                    document.createElement('button');
-
-                btn.className =
-                    'menu-option';
-
-                btn.textContent =
-                    level.height
-                        ? `${level.height}p`
-                        : `Seviye ${index + 1}`;
-
-
-                btn.onclick = () => {
-
-                    if (hls) {
-
-                        hls.currentLevel =
-                            index;
-
-                    }
-
-                    updateSelectedUI(
-                        btn,
-                        qualityListContainer
-                    );
-
-                };
-
-
-                qualityListContainer.appendChild(
-                    btn
-                );
-
-            }
-        );
-
+        console.error(error);
     }
+}
 
+function openMatch(id){
 
-    /* =========================================================
-       ALTYAZI
-    ========================================================= */
+    alert(
+        "Maç detay sayfasını bir sonraki aşamada oluşturacağız.\n\nMaç ID: " + id
+    );
+}
 
-    function buildSubtitleMenu() {
+function escapeHTML(value){
 
-        subtitlesListContainer.innerHTML = '';
+    return String(value ?? "")
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+}
 
+/*
+|--------------------------------------------------------------------------
+| TARİH BUTONLARI
+|--------------------------------------------------------------------------
+*/
 
-        const offBtn =
-            document.createElement('button');
+document.querySelectorAll(".date-btn")
+.forEach(button => {
 
-        offBtn.className =
-            'menu-option selected';
-
-        offBtn.textContent =
-            'Kapalı';
-
-
-        offBtn.onclick = () => {
-
-            for (
-                let i = 0;
-                i < video.textTracks.length;
-                i++
-            ) {
-
-                video.textTracks[i].mode =
-                    'hidden';
-
-            }
-
-            updateSelectedUI(
-                offBtn,
-                subtitlesListContainer
-            );
-
-        };
-
-
-        subtitlesListContainer.appendChild(
-            offBtn
-        );
-
-
-        if (
-            video.textTracks &&
-            video.textTracks.length > 0
-        ) {
-
-            for (
-                let i = 0;
-                i < video.textTracks.length;
-                i++
-            ) {
-
-                const track =
-                    video.textTracks[i];
-
-                const btn =
-                    document.createElement('button');
-
-                btn.className =
-                    'menu-option';
-
-                btn.textContent =
-                    track.label ||
-                    `Altyazı ${i + 1}`;
-
-
-                btn.onclick = () => {
-
-                    for (
-                        let j = 0;
-                        j < video.textTracks.length;
-                        j++
-                    ) {
-
-                        video.textTracks[j].mode =
-                            j === i
-                                ? 'showing'
-                                : 'hidden';
-
-                    }
-
-
-                    updateSelectedUI(
-                        btn,
-                        subtitlesListContainer
-                    );
-
-                };
-
-
-                subtitlesListContainer.appendChild(
-                    btn
-                );
-
-            }
-
-        }
-
-    }
-
-
-    /* =========================================================
-       SEÇİLİ MENÜ
-    ========================================================= */
-
-    function updateSelectedUI(
-        el,
-        container
-    ) {
-
-        container
-            .querySelectorAll(
-                '.menu-option'
-            )
-            .forEach(
-                o =>
-                    o.classList.remove(
-                        'selected'
-                    )
-            );
-
-
-        el.classList.add(
-            'selected'
-        );
-
-
-        settingsDropdown.classList.remove(
-            'active'
-        );
-
-        subtitlesDropdown.classList.remove(
-            'active'
-        );
-
-    }
-
-
-    /* =========================================================
-       HIZ
-       1.5X YOK
-    ========================================================= */
-
-    function setSpeed(speed) {
-
-        video.playbackRate =
-            speed;
-
+    button.addEventListener("click", () => {
 
         document
-            .querySelectorAll(
-                '#speedListContainer .menu-option'
-            )
-            .forEach(
-                btn => {
-
-                    if (speed === 1) {
-
-                        btn.classList.toggle(
-                            'selected',
-                            btn.textContent.includes(
-                                'Normal'
-                            )
-                        );
-
-                    }
-
-                    else {
-
-                        btn.classList.toggle(
-                            'selected',
-                            btn.textContent.includes(
-                                `${speed}x`
-                            )
-                        );
-
-                    }
-
-                }
+            .querySelectorAll(".date-btn")
+            .forEach(btn =>
+                btn.classList.remove("active")
             );
 
+        button.classList.add("active");
 
-        settingsDropdown.classList.remove(
-            'active'
-        );
+        const type =
+            button.dataset.date;
 
+        if(type === "today"){
+            currentDate = getLocalDate(0);
+        }
 
-        resetHideTimer();
+        if(type === "prev"){
+            currentDate = getLocalDate(-1);
+        }
+
+        if(type === "next"){
+            currentDate = getLocalDate(1);
+        }
+
+        loadMatches(currentDate);
+
+    });
+
+});
+
+/*
+|--------------------------------------------------------------------------
+| ARAMA
+|--------------------------------------------------------------------------
+*/
+
+document
+.getElementById("searchInput")
+.addEventListener("input", async event => {
+
+    const query =
+        event.target.value
+        .trim()
+        .toLowerCase();
+
+    if(!query){
+
+        loadMatches(currentDate);
+        return;
+    }
+
+    try{
+
+        const response =
+            await fetch(`/api/matches?date=${currentDate}`);
+
+        const data =
+            await response.json();
+
+        const filtered =
+            data.matches.filter(match =>
+
+                match.home.name
+                    .toLowerCase()
+                    .includes(query)
+
+                ||
+
+                match.away.name
+                    .toLowerCase()
+                    .includes(query)
+
+                ||
+
+                match.league
+                    .toLowerCase()
+                    .includes(query)
+
+            );
+
+        renderMatches(filtered);
+
+    }
+    catch(error){
+
+        console.error(error);
 
     }
 
-
-    /* =========================================================
-       AYARLAR
-    ========================================================= */
-
-    settingsBtn.addEventListener(
-        'click',
-        (e) => {
-
-            e.stopPropagation();
-
-            settingsDropdown.classList.toggle(
-                'active'
-            );
-
-            subtitlesDropdown.classList.remove(
-                'active'
-            );
-
-            resetHideTimer();
-
-        }
-    );
-
-
-    /* =========================================================
-       ALTYAZI MENÜSÜ
-    ========================================================= */
-
-    subtitlesBtn.addEventListener(
-        'click',
-        (e) => {
-
-            e.stopPropagation();
-
-            subtitlesDropdown.classList.toggle(
-                'active'
-            );
-
-            settingsDropdown.classList.remove(
-                'active'
-            );
-
-            resetHideTimer();
-
-        }
-    );
-
-
-    document.addEventListener(
-        'click',
-        () => {
-
-            settingsDropdown.classList.remove(
-                'active'
-            );
-
-            subtitlesDropdown.classList.remove(
-                'active'
-            );
-
-        }
-    );
-
-
-    settingsDropdown.addEventListener(
-        'click',
-        e => e.stopPropagation()
-    );
-
-
-    subtitlesDropdown.addEventListener(
-        'click',
-        e => e.stopPropagation()
-    );
-
-
-    /* =========================================================
-       OYNAT / DURDUR
-    ========================================================= */
-
-    function togglePlay() {
-
-        if (video.paused) {
-
-            const playPromise =
-                video.play();
-
-            if (
-                playPromise &&
-                typeof playPromise.catch === 'function'
-            ) {
-
-                playPromise.catch(
-                    error => {
-
-                        console.warn(
-                            "Oynatma engellendi:",
-                            error
-                        );
-
-                    }
-                );
-
-            }
-
-        }
-
-        else {
-
-            video.pause();
-
-        }
-
-    }
-
-
-    video.addEventListener(
-        'play',
-        () => {
-
-            playPauseIconSvg.innerHTML =
-                '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
-
-            showCenterAnimation(
-                'play'
-            );
-
-        }
-    );
-
-
-    video.addEventListener(
-        'pause',
-        () => {
-
-            playPauseIconSvg.innerHTML =
-                '<path d="M8 5v14l11-7z"/>';
-
-            showCenterAnimation(
-                'pause'
-            );
-
-        }
-    );
-
-
-    playPauseBtn.addEventListener(
-        'click',
-        () => {
-
-            togglePlay();
-
-            resetHideTimer();
-
-        }
-    );
-
-
-    /* =========================================================
-       ORTA ANİMASYON
-    ========================================================= */
-
-    function showCenterAnimation(state) {
-
-        if (state === 'play') {
-
-            centerPlayIconSvg.innerHTML =
-                '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
-
-        }
-
-        else {
-
-            centerPlayIconSvg.innerHTML =
-                '<path d="M8 5v14l11-7z"/>';
-
-        }
-
-
-        centerBigPlayBtn.classList.add(
-            'show'
-        );
-
-
-        clearTimeout(
-            centerAnimTimeout
-        );
-
-
-        centerAnimTimeout =
-            setTimeout(
-                () => {
-
-                    centerBigPlayBtn.classList.remove(
-                        'show'
-                    );
-
-                },
-                600
-            );
-
-    }
-
-
-    centerBigPlayBtn.addEventListener(
-        'click',
-        (e) => {
-
-            e.stopPropagation();
-
-            togglePlay();
-
-            resetHideTimer();
-
-        }
-    );
-
-
-    /* =========================================================
-       10 SANİYE GERİ
-    ========================================================= */
-
-    overlayRewind.addEventListener(
-        'click',
-        (e) => {
-
-            e.stopPropagation();
-
-            if (
-                Number.isFinite(
-                    video.currentTime
-                )
-            ) {
-
-                video.currentTime =
-                    Math.max(
-                        0,
-                        video.currentTime - 10
-                    );
-
-            }
-
-            resetHideTimer();
-
-        }
-    );
-
-
-    /* =========================================================
-       10 SANİYE İLERİ
-    ========================================================= */
-
-    overlayForward.addEventListener(
-        'click',
-        (e) => {
-
-            e.stopPropagation();
-
-            if (
-                Number.isFinite(video.duration) &&
-                Number.isFinite(video.currentTime)
-            ) {
-
-                video.currentTime =
-                    Math.min(
-                        video.duration,
-                        video.currentTime + 10
-                    );
-
-            }
-
-            resetHideTimer();
-
-        }
-    );
-
-
-    /* =========================================================
-       TEK / ÇİFT TIK
-    ========================================================= */
-
-    let lastTap = 0;
-
-
-    playerWrapper.addEventListener(
-        'click',
-        (e) => {
-
-            if (
-                e.target.closest(
-                    '.controls-container'
-                ) ||
-                e.target.closest(
-                    '.seek-overlay-btn'
-                ) ||
-                e.target.closest(
-                    '.center-big-play-btn'
-                ) ||
-                e.target.closest(
-                    'button'
-                )
-            ) {
-
-                return;
-
-            }
-
-
-            const currentTime =
-                Date.now();
-
-            const tapLength =
-                currentTime - lastTap;
-
-
-            if (
-                tapLength < 300 &&
-                tapLength > 0
-            ) {
-
-                toggleFullscreen();
-
-                e.preventDefault();
-
-            }
-
-            else {
-
-                if (
-                    playerWrapper.classList.contains(
-                        'hide-controls'
-                    )
-                ) {
-
-                    playerWrapper.classList.remove(
-                        'hide-controls'
-                    );
-
-                    resetHideTimer();
-
-                }
-
-                else {
-
-                    resetHideTimer();
-
-                }
-
-            }
-
-
-            lastTap =
-                currentTime;
-
-        }
-    );
-
-
-    /* =========================================================
-       ZAMAN
-    ========================================================= */
-
-    video.addEventListener(
-        'timeupdate',
-        () => {
-
-            if (isDragging) {
-                return;
-            }
-
-
-            const current =
-                video.currentTime;
-
-            const duration =
-                video.duration;
-
-
-            if (
-                Number.isFinite(duration) &&
-                duration > 0
-            ) {
-
-                progressBar.style.width =
-                    `${(current / duration) * 100}%`;
-
-                timeDisplay.textContent =
-                    formatTime(current);
-
-                liveBadge.style.display =
-                    'none';
-
-            }
-
-            else {
-
-                timeDisplay.textContent =
-                    formatTime(current);
-
-                liveBadge.style.display =
-                    'inline-block';
-
-            }
-
-
-            if (
-                video.buffered.length > 0
-            ) {
-
-                const bufferedEnd =
-                    video.buffered.end(
-                        video.buffered.length - 1
-                    );
-
-
-                if (
-                    Number.isFinite(duration) &&
-                    duration > 0
-                ) {
-
-                    bufferBar.style.width =
-                        `${(bufferedEnd / duration) * 100}%`;
-
-                }
-
-            }
-
-        }
-    );
-
-
-    /* =========================================================
-       TOOLTIP
-    ========================================================= */
-
-    progressContainer.addEventListener(
-        'mousemove',
-        (e) => {
-
-            const rect =
-                progressContainer.getBoundingClientRect();
-
-
-            const pos =
-                Math.max(
-                    0,
-                    Math.min(
-                        1,
-                        (e.clientX - rect.left) /
-                        rect.width
-                    )
-                );
-
-
-            timeTooltip.style.left =
-                `${pos * 100}%`;
-
-
-            if (
-                Number.isFinite(video.duration) &&
-                video.duration > 0
-            ) {
-
-                timeTooltip.textContent =
-                    formatTime(
-                        pos * video.duration
-                    );
-
-            }
-
-            else {
-
-                timeTooltip.textContent =
-                    "Canlı";
-
-            }
-
-        }
-    );
-
-
-    /* =========================================================
-       SEEK POZİSYONU
-    ========================================================= */
-
-    function getClampedPos(e) {
-
-        const rect =
-            progressContainer.getBoundingClientRect();
-
-
-        let clientX;
-
-
-        if (
-            e.touches &&
-            e.touches.length > 0
-        ) {
-
-            clientX =
-                e.touches[0].clientX;
-
-        }
-
-        else if (
-            e.changedTouches &&
-            e.changedTouches.length > 0
-        ) {
-
-            clientX =
-                e.changedTouches[0].clientX;
-
-        }
-
-        else {
-
-            clientX =
-                e.clientX;
-
-        }
-
-
-        return Math.max(
-            0,
-            Math.min(
-                1,
-                (clientX - rect.left) /
-                rect.width
-            )
-        );
-
-    }
-
-
-    /* =========================================================
-       MOUSE SEEK
-    ========================================================= */
-
-    progressContainer.addEventListener(
-        'mousedown',
-        (e) => {
-
-            isDragging = true;
-
-            updateDragPosition(e);
-
-            resetHideTimer();
-
-        }
-    );
-
-
-    document.addEventListener(
-        'mousemove',
-        (e) => {
-
-            if (!isDragging) {
-                return;
-            }
-
-            updateDragPosition(e);
-
-        }
-    );
-
-
-    document.addEventListener(
-        'mouseup',
-        (e) => {
-
-            if (!isDragging) {
-                return;
-            }
-
-
-            isDragging = false;
-
-
-            if (
-                Number.isFinite(video.duration) &&
-                video.duration > 0
-            ) {
-
-                video.currentTime =
-                    getClampedPos(e) *
-                    video.duration;
-
-            }
-
-
-            resetHideTimer();
-
-        }
-    );
-
-
-    /* =========================================================
-       TOUCH SEEK
-    ========================================================= */
-
-    progressContainer.addEventListener(
-        'touchstart',
-        (e) => {
-
-            isDragging = true;
-
-            updateDragPosition(e);
-
-            resetHideTimer();
-
-        },
-        {
-            passive: true
-        }
-    );
-
-
-    document.addEventListener(
-        'touchmove',
-        (e) => {
-
-            if (!isDragging) {
-                return;
-            }
-
-            updateDragPosition(e);
-
-        },
-        {
-            passive: true
-        }
-    );
-
-
-    document.addEventListener(
-        'touchend',
-        (e) => {
-
-            if (!isDragging) {
-                return;
-            }
-
-
-            isDragging = false;
-
-
-            if (
-                Number.isFinite(video.duration) &&
-                video.duration > 0 &&
-                e.changedTouches &&
-                e.changedTouches.length > 0
-            ) {
-
-                video.currentTime =
-                    getClampedPos(e) *
-                    video.duration;
-
-            }
-
-
-            resetHideTimer();
-
-        }
-    );
-
-
-    /* =========================================================
-       DRAG
-    ========================================================= */
-
-    function updateDragPosition(e) {
-
-        const pos =
-            getClampedPos(e);
-
-
-        progressBar.style.width =
-            `${pos * 100}%`;
-
-
-        if (
-            Number.isFinite(video.duration) &&
-            video.duration > 0
-        ) {
-
-            timeDisplay.textContent =
-                formatTime(
-                    pos * video.duration
-                );
-
-        }
-
-    }
-
-
-    /* =========================================================
-       ZAMAN FORMAT
-    ========================================================= */
-
-    function formatTime(seconds) {
-
-        if (
-            !Number.isFinite(seconds) ||
-            seconds < 0
-        ) {
-
-            return "00:00";
-
-        }
-
-
-        const h =
-            Math.floor(
-                seconds / 3600
-            );
-
-        const m =
-            Math.floor(
-                (seconds % 3600) / 60
-            );
-
-        const s =
-            Math.floor(
-                seconds % 60
-            );
-
-
-        if (h > 0) {
-
-            return `${h}:${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
-
-        }
-
-
-        return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
-
-    }
-
-
-    /* =========================================================
-       SES
-    ========================================================= */
-
-    volumeSlider.addEventListener(
-        'input',
-        (e) => {
-
-            const value =
-                Number(e.target.value);
-
-
-            video.volume =
-                value;
-
-            video.muted =
-                value === 0;
-
-
-            updateVolumeIcon();
-
-            resetHideTimer();
-
-        }
-    );
-
-
-    muteBtn.addEventListener(
-        'click',
-        () => {
-
-            video.muted =
-                !video.muted;
-
-
-            volumeSlider.value =
-                video.muted
-                    ? 0
-                    : video.volume;
-
-
-            updateVolumeIcon();
-
-            resetHideTimer();
-
-        }
-    );
-
-
-    function updateVolumeIcon() {
-
-        if (
-            video.muted ||
-            video.volume === 0
-        ) {
-
-            volumeIconSvg.innerHTML =
-                '<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C22.63 14.85 23 13.47 23 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>';
-
-        }
-
-        else {
-
-            volumeIconSvg.innerHTML =
-                '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77-2.99-7.86-7-8.77-7-8.77z"/>';
-
-        }
-
-    }
-
-
-    /* =========================================================
-       PIP
-    ========================================================= */
-
-    pipBtn.addEventListener(
-        'click',
-        async () => {
-
-            try {
-
-                if (
-                    document.pictureInPictureElement
-                ) {
-
-                    await document.exitPictureInPicture();
-
-                }
-
-                else if (
-                    document.pictureInPictureEnabled
-                ) {
-
-                    await video.requestPictureInPicture();
-
-                }
-
-            }
-
-            catch (err) {
-
-                console.error(
-                    "PiP Hatası:",
-                    err
-                );
-
-            }
-
-
-            resetHideTimer();
-
-        }
-    );
-
-
-    /* =========================================================
-       FULLSCREEN
-    ========================================================= */
-
-    fullscreenBtn.addEventListener(
-        'click',
-        () => {
-
-            toggleFullscreen();
-
-            resetHideTimer();
-
-        }
-    );
-
-
-    function toggleFullscreen() {
-
-        if (!document.fullscreenElement) {
-
-            if (
-                playerWrapper.requestFullscreen
-            ) {
-
-                playerWrapper
-                    .requestFullscreen()
-                    .catch(
-                        err =>
-                            console.error(
-                                "Fullscreen:",
-                                err
-                            )
-                    );
-
-            }
-
-        }
-
-        else {
-
-            document
-                .exitFullscreen()
-                .catch(
-                    () => {}
-                );
-
-        }
-
-    }
-
-
-    /* =========================================================
-       KLAVYE KONTROLLERİ
-       
-       ÖNEMLİ:
-       Burada artık e.key kullanılmıyor.
-       e.code ile SADECE gerçek tuşlar kontrol ediliyor.
-       
-       ← = -10
-       → = +10
-       Space = Play/Pause
-       K = Play/Pause
-       F = Fullscreen
-       M = Mute
-       ↑ = Ses +
-       ↓ = Ses -
-    ========================================================= */
-
-    document.addEventListener(
-        'keydown',
-        (e) => {
-
-            /*
-             * Input alanlarında klavye kontrollerini
-             * çalıştırma.
-             */
-
-            const active =
-                document.activeElement;
-
-            if (
-                active &&
-                (
-                    active.tagName === 'INPUT' ||
-                    active.tagName === 'TEXTAREA' ||
-                    active.tagName === 'SELECT'
-                )
-            ) {
-
-                return;
-
-            }
-
-
-            /*
-             * Modifier tuşlarıyla gelen
-             * kombinasyonlara karışma.
-             */
-
-            if (
-                e.ctrlKey ||
-                e.altKey ||
-                e.metaKey
-            ) {
-
-                return;
-
-            }
-
-
-            /*
-             * Tuş basılı tutulurken
-             * sürekli seek yapılmasını engelle.
-             */
-
-            if (e.repeat) {
-
-                return;
-
-            }
-
-
-            /*
-             * SADECE e.code kullanıyoruz.
-             */
-
-            switch (e.code) {
-
-                /* =====================
-                   SPACE
-                ===================== */
-
-                case 'Space':
-
-                    e.preventDefault();
-
-                    togglePlay();
-
-                    resetHideTimer();
-
-                    break;
-
-
-                /* =====================
-                   K
-                ===================== */
-
-                case 'KeyK':
-
-                    e.preventDefault();
-
-                    togglePlay();
-
-                    resetHideTimer();
-
-                    break;
-
-
-                /* =====================
-                   F
-                ===================== */
-
-                case 'KeyF':
-
-                    e.preventDefault();
-
-                    toggleFullscreen();
-
-                    resetHideTimer();
-
-                    break;
-
-
-                /* =====================
-                   M
-                ===================== */
-
-                case 'KeyM':
-
-                    e.preventDefault();
-
-                    muteBtn.click();
-
-                    resetHideTimer();
-
-                    break;
-
-
-                /* =====================
-                   SAĞ OK
-                   +10 SANİYE
-                ===================== */
-
-                case 'ArrowRight':
-
-                    e.preventDefault();
-
-                    if (
-                        Number.isFinite(
-                            video.duration
-                        ) &&
-                        Number.isFinite(
-                            video.currentTime
-                        )
-                    ) {
-
-                        video.currentTime =
-                            Math.min(
-                                video.duration,
-                                video.currentTime + 10
-                            );
-
-                    }
-
-                    resetHideTimer();
-
-                    break;
-
-
-                /* =====================
-                   SOL OK
-                   -10 SANİYE
-                ===================== */
-
-                case 'ArrowLeft':
-
-                    e.preventDefault();
-
-                    if (
-                        Number.isFinite(
-                            video.currentTime
-                        )
-                    ) {
-
-                        video.currentTime =
-                            Math.max(
-                                0,
-                                video.currentTime - 10
-                            );
-
-                    }
-
-                    resetHideTimer();
-
-                    break;
-
-
-                /* =====================
-                   YUKARI
-                   SES +
-                ===================== */
-
-                case 'ArrowUp':
-
-                    e.preventDefault();
-
-                    video.muted = false;
-
-                    video.volume =
-                        Math.min(
-                            1,
-                            video.volume + 0.05
-                        );
-
-                    volumeSlider.value =
-                        video.volume;
-
-                    updateVolumeIcon();
-
-                    resetHideTimer();
-
-                    break;
-
-
-                /* =====================
-                   AŞAĞI
-                   SES -
-                ===================== */
-
-                case 'ArrowDown':
-
-                    e.preventDefault();
-
-                    video.volume =
-                        Math.max(
-                            0,
-                            video.volume - 0.05
-                        );
-
-                    if (
-                        video.volume === 0
-                    ) {
-
-                        video.muted = true;
-
-                    }
-
-                    volumeSlider.value =
-                        video.volume;
-
-                    updateVolumeIcon();
-
-                    resetHideTimer();
-
-                    break;
-
-
-                /*
-                 * DİĞER TÜM TUŞLAR:
-                 *
-                 * HİÇBİR ŞEY YAPMA.
-                 *
-                 * Özellikle burada artık
-                 * geri sarma yok.
-                 */
-
-                default:
-
-                    return;
-
-            }
-
-        }
-    );
-
-
-    /* =========================================================
-       KONTROLLERİ GİZLE
-    ========================================================= */
-
-    function resetHideTimer() {
-
-        playerWrapper.classList.remove(
-            'hide-controls'
-        );
-
-
-        clearTimeout(
-            hideTimeout
-        );
-
-
-        hideTimeout =
-            setTimeout(
-                () => {
-
-                    if (
-                        !video.paused &&
-                        !settingsDropdown.classList.contains(
-                            'active'
-                        ) &&
-                        !subtitlesDropdown.classList.contains(
-                            'active'
-                        )
-                    ) {
-
-                        playerWrapper.classList.add(
-                            'hide-controls'
-                        );
-
-                    }
-
-                },
-                3000
-            );
-
-    }
-
-
-    /* =========================================================
-       MOUSE / TOUCH
-    ========================================================= */
-
-    playerWrapper.addEventListener(
-        'mousemove',
-        () => {
-
-            resetHideTimer();
-
-        }
-    );
-
-
-    playerWrapper.addEventListener(
-        'touchstart',
-        () => {
-
-            resetHideTimer();
-
-        },
-        {
-            passive: true
-        }
-    );
-
-
-    /* =========================================================
-       FULLSCREEN DEĞİŞİNCE
-    ========================================================= */
-
-    document.addEventListener(
-        'fullscreenchange',
-        () => {
-
-            resetHideTimer();
-
-        }
-    );
-
-
-    /* =========================================================
-       BAŞLAT
-    ========================================================= */
-
-    initPlayer();
+});
+
+/*
+|--------------------------------------------------------------------------
+| İLK YÜKLEME
+|--------------------------------------------------------------------------
+*/
+
+loadMatches();
 
 </script>
 
